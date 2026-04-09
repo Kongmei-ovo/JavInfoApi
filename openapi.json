@@ -1,0 +1,518 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "JavInfoApi",
+    "description": "JAV 元数据查询 API，基于 r18.dev 数据库（PostgreSQL）",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发服务器"
+    }
+  ],
+  "paths": {
+    "/api/v1/videos/search": {
+      "get": {
+        "summary": "搜索视频",
+        "description": "多条件组合搜索视频",
+        "operationId": "searchVideos",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配标题、描述）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "content_id",
+            "in": "query",
+            "description": "内容ID精确匹配",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "dvd_id",
+            "in": "query",
+            "description": "DVD编号（自动处理横杠）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "maker_id",
+            "in": "query",
+            "description": "厂商ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "series_id",
+            "in": "query",
+            "description": "系列ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "actress_id",
+            "in": "query",
+            "description": "演员ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "分类ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码，从1开始",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "每页数量",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VideoListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos": {
+      "get": {
+        "summary": "视频列表",
+        "description": "获取视频分页列表",
+        "operationId": "listVideos",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VideoListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{content_id}": {
+      "get": {
+        "summary": "视频详情",
+        "description": "获取单个视频的完整信息",
+        "operationId": "getVideo",
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "required": true,
+            "description": "视频内容ID",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "service_code",
+            "in": "query",
+            "description": "服务代码筛选",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VideoDetailResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "视频不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/actresses": {
+      "get": {
+        "summary": "演员列表",
+        "description": "获取演员分页列表",
+        "operationId": "listActresses",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ActressListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/actresses/{id}": {
+      "get": {
+        "summary": "演员详情",
+        "description": "获取单个演员的信息",
+        "operationId": "getActress",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "演员ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ActressDetailResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "演员不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/actresses/{id}/videos": {
+      "get": {
+        "summary": "演员作品列表",
+        "description": "获取某演员出演的所有视频",
+        "operationId": "getActressVideos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "演员ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VideoListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/makers": {
+      "get": {
+        "summary": "厂商列表",
+        "description": "获取所有制作厂商（无分页，数据量小）",
+        "operationId": "listMakers",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Maker" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/labels": {
+      "get": {
+        "summary": "品牌列表",
+        "description": "获取所有品牌系列（无分页，数据量小）",
+        "operationId": "listLabels",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Label" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/series": {
+      "get": {
+        "summary": "系列列表",
+        "description": "获取所有影片系列（无分页，数据量小）",
+        "operationId": "listSeries",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Series" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "summary": "题材分类列表",
+        "description": "获取所有题材分类（无分页，数据量小）",
+        "operationId": "listCategories",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Category" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "summary": "统计数据",
+        "description": "获取数据库统计信息",
+        "operationId": "getStats",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StatsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "健康检查",
+        "description": "检查服务状态和数据库连接",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "VideoListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VideoSummary" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
+        }
+      },
+      "VideoSummary": {
+        "type": "object",
+        "properties": {
+          "content_id": { "type": "string" },
+          "dvd_id": { "type": "string" },
+          "title_en": { "type": "string" },
+          "runtime_mins": { "type": "integer" },
+          "release_date": { "type": "string", "format": "date" },
+          "jacket_thumb_url": { "type": "string" },
+          "site_id": { "type": "integer" },
+          "service_code": { "type": "string" }
+        }
+      },
+      "VideoDetailResponse": {
+        "type": "object",
+        "properties": {
+          "content_id": { "type": "string" },
+          "dvd_id": { "type": "string" },
+          "title_en": { "type": "string" },
+          "title_ja": { "type": "string" },
+          "comment_en": { "type": "string" },
+          "comment_ja": { "type": "string" },
+          "runtime_mins": { "type": "integer" },
+          "release_date": { "type": "string", "format": "date" },
+          "sample_url": { "type": "string" },
+          "maker_id": { "type": "integer" },
+          "label_id": { "type": "integer" },
+          "series_id": { "type": "integer" },
+          "jacket_full_url": { "type": "string" },
+          "jacket_thumb_url": { "type": "string" },
+          "gallery_thumb_first": { "type": "string" },
+          "gallery_thumb_last": { "type": "string" },
+          "site_id": { "type": "integer" },
+          "service_code": { "type": "string" },
+          "maker": { "$ref": "#/components/schemas/Maker" },
+          "label": { "$ref": "#/components/schemas/Label" },
+          "series": { "$ref": "#/components/schemas/Series" },
+          "actresses": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ActressDetailResponse" }
+          }
+        }
+      },
+      "ActressListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ActressSummary" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
+        }
+      },
+      "ActressSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_romaji": { "type": "string" },
+          "name_kanji": { "type": "string" },
+          "name_kana": { "type": "string" },
+          "image_url": { "type": "string" }
+        }
+      },
+      "ActressDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_romaji": { "type": "string" },
+          "name_kanji": { "type": "string" },
+          "name_kana": { "type": "string" },
+          "image_url": { "type": "string" }
+        }
+      },
+      "Maker": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_en": { "type": "string" },
+          "name_ja": { "type": "string" }
+        }
+      },
+      "Label": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_en": { "type": "string" },
+          "name_ja": { "type": "string" }
+        }
+      },
+      "Series": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_en": { "type": "string" },
+          "name_ja": { "type": "string" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_en": { "type": "string" },
+          "name_ja": { "type": "string" }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "properties": {
+          "videos": { "type": "integer" },
+          "actresses": { "type": "integer" },
+          "makers": { "type": "integer" },
+          "series": { "type": "integer" },
+          "labels": { "type": "integer" }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}
