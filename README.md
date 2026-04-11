@@ -78,6 +78,7 @@ GET /api/v1/makers      # 厂商列表
 GET /api/v1/labels      # 标签列表
 GET /api/v1/series      # 系列列表
 GET /api/v1/categories  # 分类列表
+GET /api/v1/categories/stats  # 分类统计（带影片计数）
 ```
 
 ### 统计 `GET /api/v1/stats`

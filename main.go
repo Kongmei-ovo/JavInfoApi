@@ -93,6 +93,14 @@ type Category struct {
 	NameJa *string `json:"name_ja,omitempty"`
 }
 
+// CategoryWithCount represents a category with its video count
+type CategoryWithCount struct {
+	ID         int    `json:"id"`
+	NameEn     string `json:"name_en"`
+	NameJa     *string `json:"name_ja,omitempty"`
+	VideoCount int64  `json:"video_count"`
+}
+
 // PaginatedResponse is a generic paginated response
 type PaginatedResponse struct {
 	Data       interface{} `json:"data"`
@@ -130,6 +138,7 @@ func main() {
 	r.GET("/api/v1/labels", listLabels)
 	r.GET("/api/v1/series", listSeries)
 	r.GET("/api/v1/categories", listCategories)
+	r.GET("/api/v1/categories/stats", getCategoryStats)
 
 	r.GET("/api/v1/stats", getStats)
 
@@ -854,6 +863,33 @@ func listCategories(c *gin.Context) {
 	for rows.Next() {
 		var cat Category
 		if err := rows.Scan(&cat.ID, &cat.NameEn, &cat.NameJa); err == nil {
+			categories = append(categories, cat)
+		}
+	}
+	c.JSON(http.StatusOK, categories)
+}
+
+func getCategoryStats(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	rows, err := pool.Query(ctx, `
+		SELECT c.id, COALESCE(c.name_en, ''), c.name_ja, COUNT(vc.content_id) as video_count
+		FROM derived_category c
+		LEFT JOIN derived_video_category vc ON c.id = vc.category_id
+		GROUP BY c.id, c.name_en, c.name_ja
+		ORDER BY video_count DESC, c.name_en
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	categories := []CategoryWithCount{}
+	for rows.Next() {
+		var cat CategoryWithCount
+		if err := rows.Scan(&cat.ID, &cat.NameEn, &cat.NameJa, &cat.VideoCount); err == nil {
 			categories = append(categories, cat)
 		}
 	}

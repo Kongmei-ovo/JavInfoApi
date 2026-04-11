@@ -428,6 +428,43 @@ curl "http://localhost:8080/api/v1/categories"
 
 ---
 
+#### 11. 题材分类统计
+
+**接口**: `GET /api/v1/categories/stats`
+
+**描述**: 获取所有题材分类及其在影片中的累计出现次数
+
+**参数**: 无
+
+**说明**:
+- 返回所有分类及每个分类关联的视频数量
+- 结果按 video_count 降序排序
+
+**示例**:
+```bash
+curl "http://localhost:8080/api/v1/categories/stats"
+```
+
+**响应**:
+```json
+[
+  {
+    "id": 6102,
+    "name_en": "",
+    "name_ja": "サンプル動画",
+    "video_count": 634204
+  },
+  {
+    "id": 4025,
+    "name_en": "Featured Actress",
+    "name_ja": "単体作品",
+    "video_count": 576000
+  }
+]
+```
+
+---
+
 ### 系统
 
 ---
