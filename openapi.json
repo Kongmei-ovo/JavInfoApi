@@ -43,10 +43,22 @@
             "schema": { "type": "integer" }
           },
           {
+            "name": "maker_name",
+            "in": "query",
+            "description": "厂商名称（模糊匹配）",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "series_id",
             "in": "query",
             "description": "系列ID",
             "schema": { "type": "integer" }
+          },
+          {
+            "name": "series_name",
+            "in": "query",
+            "description": "系列名称（模糊匹配）",
+            "schema": { "type": "string" }
           },
           {
             "name": "actress_id",
@@ -55,10 +67,22 @@
             "schema": { "type": "integer" }
           },
           {
+            "name": "actress_name",
+            "in": "query",
+            "description": "演员名称（模糊匹配）",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "category_id",
             "in": "query",
             "description": "分类ID",
             "schema": { "type": "integer" }
+          },
+          {
+            "name": "category_name",
+            "in": "query",
+            "description": "分类名称（模糊匹配）",
+            "schema": { "type": "string" }
           },
           {
             "name": "page",
@@ -423,6 +447,10 @@
           "actresses": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/ActressDetailResponse" }
+          },
+          "categories": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Category" }
           }
         }
       },

@@ -184,15 +184,21 @@ HTTP状态码：
 | content_id | string | 否 | 内容ID精确匹配 | `content_id=100tv00031` |
 | dvd_id | string | 否 | DVD编号（自动处理横杠） | `dvd_id=100TV-031` 或 `dvd_id=100TV031` |
 | maker_id | int | 否 | 厂商ID | `maker_id=1001` |
+| maker_name | string | 否 | 厂商名称（模糊匹配） | `maker_name=SOD` |
 | series_id | int | 否 | 系列ID | `series_id=211325` |
+| series_name | string | 否 | 系列名称（模糊匹配） | `series_name=Tokyo` |
 | actress_id | int | 否 | 演员ID | `actress_id=12345` |
+| actress_name | string | 否 | 演员名称（模糊匹配） | `actress_name=Yui` |
 | category_id | int | 否 | 分类ID | `category_id=4024` |
+| category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
 
 **说明**:
 - `dvd_id` 搜索时会自动去除横杠和转换为小写，支持 `ABC-123`、`ABC123`、`abc123` 等格式
 - `q` 参数使用 ILIKE 模糊匹配，会匹配 title_en、title_ja、comment_en
+- `*_name` 参数使用 ILIKE 模糊匹配，支持名称模糊搜索
+- `*_id` 和 `*_name` 同时存在时，优先使用 `*_id`
 - 多个条件同时使用时为 AND 关系
 - 结果按 release_date 降序排序
 
@@ -204,11 +210,20 @@ curl "http://localhost:8080/api/v1/videos/search?q=tokyo"
 # 精确查找（推荐，已建索引）
 curl "http://localhost:8080/api/v1/videos/search?dvd_id=ABP-001"
 
-# 按演员搜索
+# 按演员ID搜索
 curl "http://localhost:8080/api/v1/videos/search?actress_id=12345"
 
+# 按厂商名称搜索
+curl "http://localhost:8080/api/v1/videos/search?maker_name=SOD"
+
+# 按演员名称搜索
+curl "http://localhost:8080/api/v1/videos/search?actress_name=Yui%20Hatano"
+
+# 按分类名称搜索
+curl "http://localhost:8080/api/v1/videos/search?category_name=Amateur"
+
 # 组合搜索
-curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&category_id=4024&page=1"
+curl "http://localhost:8080/api/v1/videos/search?maker_name=SOD&category_name=Amateur&page=1"
 ```
 
 ---
@@ -251,8 +266,9 @@ curl "http://localhost:8080/api/v1/videos?page=1&page_size=20"
 | service_code | string | 否 | 服务代码筛选 | `service_code=FANZA` |
 
 **说明**:
-- 返回完整视频信息，包括关联的演员、厂商、品牌、系列
+- 返回完整视频信息，包括关联的演员、厂商、品牌、系列、题材分类
 - 演员信息通过 `derived_video_actress` 关联表获取，按 ordinality 排序
+- 题材分类通过 `derived_video_category` 关联表获取，按 name_en 排序
 
 **示例**:
 ```bash
@@ -608,6 +624,18 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
       "name_kanji": "千華ねむ",
       "name_kana": "ちーはな みお",
       "image_url": "..."
+    }
+  ],
+  "categories": [
+    {
+      "id": 4024,
+      "name_en": "Amateur",
+      "name_ja": "素人"
+    },
+    {
+      "id": 4025,
+      "name_en": "Featured Actress",
+      "name_ja": "単体作品"
     }
   ]
 }

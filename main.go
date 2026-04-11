@@ -53,6 +53,7 @@ type Video struct {
 	Label          *Label    `json:"label,omitempty"`
 	Series         *Series   `json:"series,omitempty"`
 	Actresses      []Actress `json:"actresses,omitempty"`
+	Categories     []Category `json:"categories,omitempty"`
 }
 
 // Actress represents an actress
@@ -364,9 +365,13 @@ func searchVideos(c *gin.Context) {
 	contentID := c.Query("content_id")
 	dvdID := c.Query("dvd_id")
 	makerID := getQueryInt(c, "maker_id", 0)
+	makerName := c.Query("maker_name")
 	seriesID := getQueryInt(c, "series_id", 0)
+	seriesName := c.Query("series_name")
 	actressID := getQueryInt(c, "actress_id", 0)
+	actressName := c.Query("actress_name")
 	categoryID := getQueryInt(c, "category_id", 0)
+	categoryName := c.Query("category_name")
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
 
@@ -409,24 +414,112 @@ func searchVideos(c *gin.Context) {
 		whereClause += fmt.Sprintf(" AND maker_id = $%d", argIndex)
 		args = append(args, makerID)
 		argIndex++
+	} else if makerName != "" {
+		// Resolve maker_name to maker_id(s)
+		rows, err := pool.Query(ctx, "SELECT id FROM derived_maker WHERE name_en ILIKE $1 OR name_ja ILIKE $1", "%"+makerName+"%")
+		if err == nil {
+			defer rows.Close()
+			makerIDs := []int{}
+			for rows.Next() {
+				var id int
+				if rows.Scan(&id) == nil {
+					makerIDs = append(makerIDs, id)
+				}
+			}
+			if len(makerIDs) > 0 {
+				placeholders := make([]string, len(makerIDs))
+				for i, id := range makerIDs {
+					args = append(args, id)
+					placeholders[i] = fmt.Sprintf("$%d", argIndex)
+					argIndex++
+				}
+				whereClause += fmt.Sprintf(" AND maker_id IN (%s)", strings.Join(placeholders, ","))
+			}
+		}
 	}
 
 	if seriesID > 0 {
 		whereClause += fmt.Sprintf(" AND series_id = $%d", argIndex)
 		args = append(args, seriesID)
 		argIndex++
+	} else if seriesName != "" {
+		// Resolve series_name to series_id(s)
+		rows, err := pool.Query(ctx, "SELECT id FROM derived_series WHERE name_en ILIKE $1 OR name_ja ILIKE $1", "%"+seriesName+"%")
+		if err == nil {
+			defer rows.Close()
+			seriesIDs := []int{}
+			for rows.Next() {
+				var id int
+				if rows.Scan(&id) == nil {
+					seriesIDs = append(seriesIDs, id)
+				}
+			}
+			if len(seriesIDs) > 0 {
+				placeholders := make([]string, len(seriesIDs))
+				for i, id := range seriesIDs {
+					args = append(args, id)
+					placeholders[i] = fmt.Sprintf("$%d", argIndex)
+					argIndex++
+				}
+				whereClause += fmt.Sprintf(" AND series_id IN (%s)", strings.Join(placeholders, ","))
+			}
+		}
 	}
 
 	if actressID > 0 {
 		whereClause += fmt.Sprintf(" AND content_id IN (SELECT content_id FROM derived_video_actress WHERE actress_id = $%d)", argIndex)
 		args = append(args, actressID)
 		argIndex++
+	} else if actressName != "" {
+		// Resolve actress_name to actress_id(s)
+		rows, err := pool.Query(ctx, "SELECT id FROM derived_actress WHERE name_romaji ILIKE $1 OR name_kanji ILIKE $1 OR name_kana ILIKE $1", "%"+actressName+"%")
+		if err == nil {
+			defer rows.Close()
+			actressIDs := []int{}
+			for rows.Next() {
+				var id int
+				if rows.Scan(&id) == nil {
+					actressIDs = append(actressIDs, id)
+				}
+			}
+			if len(actressIDs) > 0 {
+				placeholders := make([]string, len(actressIDs))
+				for i, id := range actressIDs {
+					args = append(args, id)
+					placeholders[i] = fmt.Sprintf("$%d", argIndex)
+					argIndex++
+				}
+				whereClause += fmt.Sprintf(" AND content_id IN (SELECT content_id FROM derived_video_actress WHERE actress_id IN (%s))", strings.Join(placeholders, ","))
+			}
+		}
 	}
 
 	if categoryID > 0 {
 		whereClause += fmt.Sprintf(" AND content_id IN (SELECT content_id FROM derived_video_category WHERE category_id = $%d)", argIndex)
 		args = append(args, categoryID)
 		argIndex++
+	} else if categoryName != "" {
+		// Resolve category_name to category_id(s)
+		rows, err := pool.Query(ctx, "SELECT id FROM derived_category WHERE name_en ILIKE $1 OR name_ja ILIKE $1", "%"+categoryName+"%")
+		if err == nil {
+			defer rows.Close()
+			catIDs := []int{}
+			for rows.Next() {
+				var id int
+				if rows.Scan(&id) == nil {
+					catIDs = append(catIDs, id)
+				}
+			}
+			if len(catIDs) > 0 {
+				placeholders := make([]string, len(catIDs))
+				for i, id := range catIDs {
+					args = append(args, id)
+					placeholders[i] = fmt.Sprintf("$%d", argIndex)
+					argIndex++
+				}
+				whereClause += fmt.Sprintf(" AND content_id IN (SELECT content_id FROM derived_video_category WHERE category_id IN (%s))", strings.Join(placeholders, ","))
+			}
+		}
 	}
 
 	var totalCount int
@@ -530,6 +623,29 @@ func loadRelatedData(ctx context.Context, video *Video) {
 			var a Actress
 			if err := rows.Scan(&a.ID, &a.NameRomaji, &a.NameKanji, &a.NameKana, &a.ImageURL); err == nil {
 				video.Actresses = append(video.Actresses, a)
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rows, err := pool.Query(ctx, `
+			SELECT c.id, c.name_en, c.name_ja
+			FROM derived_category c
+			JOIN derived_video_category vc ON c.id = vc.category_id
+			WHERE vc.content_id = $1
+			ORDER BY c.name_en
+		`, video.ContentID)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var cat Category
+			if err := rows.Scan(&cat.ID, &cat.NameEn, &cat.NameJa); err == nil {
+				video.Categories = append(video.Categories, cat)
 			}
 		}
 	}()
