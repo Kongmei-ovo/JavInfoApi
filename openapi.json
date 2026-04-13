@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "JavInfoApi",
-    "description": "JAV 元数据查询 API，基于 r18.dev 数据库（PostgreSQL）",
+    "description": "媒体元数据查询 API，基于 r18.dev 数据库（PostgreSQL）",
     "version": "1.0.0"
   },
   "servers": [

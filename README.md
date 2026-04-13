@@ -1,6 +1,6 @@
 # JavInfoApi
 
-高性能JAV元数据API，基于Go + PostgreSQL
+高性能媒体元数据查询API，基于Go + PostgreSQL
 
 ## 快速开始
 

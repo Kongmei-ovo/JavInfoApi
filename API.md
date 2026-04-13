@@ -1,6 +1,6 @@
 # JavInfoApi 接口文档
 
-> JAV 元数据查询 API，基于 r18.dev 数据库（PostgreSQL）
+> 媒体元数据查询 API，基于 r18.dev 数据库（PostgreSQL）
 
 ---
 
@@ -588,7 +588,7 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
    - title_en / title_ja (标题)
    - release_date (日期)
    - actresses (演员列表)
-3. 使用 content_id 和 service_code 组合去磁力站点/JAVBus/JAVLibrary 搜索下载链接
+3. 使用 content_id 和 service_code 组合去其他站点搜索下载链接
 ```
 
 ---
