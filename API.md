@@ -269,6 +269,7 @@ curl "http://localhost:8080/api/v1/videos?page=1&page_size=20"
 - 返回完整视频信息，包括关联的演员、厂商、品牌、系列、题材分类
 - 演员信息通过 `derived_video_actress` 关联表获取，按 ordinality 排序
 - 题材分类通过 `derived_video_category` 关联表获取，按 name_en 排序
+- 预览视频 sample_url 优先使用 derived_video 表数据，若为空则从 source_dmm_trailer 补全（覆盖率约91%）
 
 **示例**:
 ```bash
