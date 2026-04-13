@@ -325,12 +325,14 @@ func getVideo(c *gin.Context) {
 	defer cancel()
 
 	query := `
-		SELECT content_id, dvd_id, title_en, title_ja, comment_en, comment_ja,
-			   runtime_mins, release_date, sample_url, maker_id, label_id, series_id,
-			   jacket_full_url, jacket_thumb_url, gallery_thumb_first, gallery_thumb_last,
-			   site_id, service_code
-		FROM derived_video
-		WHERE content_id = $1`
+		SELECT v.content_id, v.dvd_id, v.title_en, v.title_ja, v.comment_en, v.comment_ja,
+			   v.runtime_mins, v.release_date, COALESCE(v.sample_url, t.url) as sample_url,
+			   v.maker_id, v.label_id, v.series_id,
+			   v.jacket_full_url, v.jacket_thumb_url, v.gallery_thumb_first, v.gallery_thumb_last,
+			   v.site_id, v.service_code
+		FROM derived_video v
+		LEFT JOIN source_dmm_trailer t ON v.content_id = t.content_id
+		WHERE v.content_id = $1`
 	args := []interface{}{contentID}
 
 	if serviceCode != "" {
