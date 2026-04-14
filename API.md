@@ -193,6 +193,9 @@ HTTP状态码：
 | category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
+| sort_by | string | 否 | 排序字段 | `sort_by=release_date` |
+| order | string | 否 | 排序方向（asc/desc） | `order=desc` |
+| random | string | 否 | 随机返回（random=1） | `random=1` |
 
 **说明**:
 - `dvd_id` 搜索时会自动去除横杠和转换为小写，支持 `ABC-123`、`ABC123`、`abc123` 等格式
@@ -200,7 +203,9 @@ HTTP状态码：
 - `*_name` 参数使用 ILIKE 模糊匹配，支持名称模糊搜索
 - `*_id` 和 `*_name` 同时存在时，优先使用 `*_id`
 - 多个条件同时使用时为 AND 关系
-- 结果按 release_date 降序排序
+- `sort_by` 支持字段：`release_date`、`content_id`、`dvd_id`、`title_en`、`title_ja`、`runtime_mins`
+- `random` 与 `sort_by` 互斥，启用 `random` 时忽略 `sort_by` 和 `order`
+- 默认按 release_date 降序排序
 
 **示例**:
 ```bash
@@ -221,6 +226,12 @@ curl "http://localhost:8080/api/v1/videos/search?actress_name=Yui%20Hatano"
 
 # 按分类名称搜索
 curl "http://localhost:8080/api/v1/videos/search?category_name=Amateur"
+
+# 按发行日期升序
+curl "http://localhost:8080/api/v1/videos/search?sort_by=release_date&order=asc"
+
+# 随机返回
+curl "http://localhost:8080/api/v1/videos/search?random=1&page_size=10"
 
 # 组合搜索
 curl "http://localhost:8080/api/v1/videos/search?maker_name=SOD&category_name=Amateur&page=1"

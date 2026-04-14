@@ -385,6 +385,9 @@ func searchVideos(c *gin.Context) {
 	categoryName := c.Query("category_name")
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
+	sortBy := c.Query("sort_by")
+	order := c.Query("order")
+	random := c.Query("random")
 
 	if pageSize > 100 {
 		pageSize = 100
@@ -541,14 +544,45 @@ func searchVideos(c *gin.Context) {
 		return
 	}
 
+	// 构建排序
+	var orderClause string
+	if random == "1" {
+		orderClause = "ORDER BY RANDOM()"
+	} else if sortBy != "" {
+		// 验证排序字段
+		validSortFields := map[string]bool{
+			"release_date": true,
+			"content_id":   true,
+			"dvd_id":      true,
+			"title_en":    true,
+			"title_ja":    true,
+			"runtime_mins": true,
+		}
+		if validSortFields[sortBy] {
+			dir := "ASC"
+			if order == "desc" {
+				dir = "DESC"
+			}
+			if sortBy == "release_date" || sortBy == "runtime_mins" {
+				orderClause = fmt.Sprintf("ORDER BY %s %s NULLS LAST", sortBy, dir)
+			} else {
+				orderClause = fmt.Sprintf("ORDER BY %s %s", sortBy, dir)
+			}
+		} else {
+			orderClause = "ORDER BY release_date DESC NULLS LAST, content_id DESC"
+		}
+	} else {
+		orderClause = "ORDER BY release_date DESC NULLS LAST, content_id DESC"
+	}
+
 	selectQuery := fmt.Sprintf(`
 		SELECT content_id, dvd_id, title_en, title_ja, runtime_mins, release_date,
 			   jacket_thumb_url, site_id, service_code
 		FROM derived_video
 		%s
-		ORDER BY release_date DESC NULLS LAST, content_id DESC
+		%s
 		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
+	`, whereClause, orderClause, argIndex, argIndex+1)
 	args = append(args, pageSize, offset)
 
 	rows, err := pool.Query(ctx, selectQuery, args...)

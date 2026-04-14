@@ -95,6 +95,24 @@
             "in": "query",
             "description": "每页数量",
             "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "排序字段（release_date/content_id/dvd_id/title_en/title_ja/runtime_mins）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "排序方向（asc/desc）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "random",
+            "in": "query",
+            "description": "随机返回（random=1），与sort_by互斥",
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
