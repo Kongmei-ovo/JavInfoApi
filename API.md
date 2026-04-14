@@ -203,7 +203,8 @@ HTTP状态码：
 - `*_name` 参数使用 ILIKE 模糊匹配，支持名称模糊搜索
 - `*_id` 和 `*_name` 同时存在时，优先使用 `*_id`
 - 多个条件同时使用时为 AND 关系
-- `sort_by` 支持字段：`release_date`、`content_id`、`dvd_id`、`title_en`、`title_ja`、`runtime_mins`
+- `sort_by` 支持多字段（逗号分隔）：`release_date,title_en`
+- `order` 与 `sort_by` 对应，支持多方向（逗号分隔）：`desc,asc`
 - `random` 与 `sort_by` 互斥，启用 `random` 时忽略 `sort_by` 和 `order`
 - 默认按 release_date 降序排序
 
@@ -229,6 +230,9 @@ curl "http://localhost:8080/api/v1/videos/search?category_name=Amateur"
 
 # 按发行日期升序
 curl "http://localhost:8080/api/v1/videos/search?sort_by=release_date&order=asc"
+
+# 多字段排序（先按release_date降序，再按title_en升序）
+curl "http://localhost:8080/api/v1/videos/search?sort_by=release_date,title_en&order=desc,asc"
 
 # 随机返回
 curl "http://localhost:8080/api/v1/videos/search?random=1&page_size=10"

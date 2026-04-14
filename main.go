@@ -549,7 +549,6 @@ func searchVideos(c *gin.Context) {
 	if random == "1" {
 		orderClause = "ORDER BY RANDOM()"
 	} else if sortBy != "" {
-		// 验证排序字段
 		validSortFields := map[string]bool{
 			"release_date": true,
 			"content_id":   true,
@@ -558,16 +557,38 @@ func searchVideos(c *gin.Context) {
 			"title_ja":    true,
 			"runtime_mins": true,
 		}
-		if validSortFields[sortBy] {
-			dir := "ASC"
-			if order == "desc" {
-				dir = "DESC"
+		nullsLastFields := map[string]bool{
+			"release_date": true,
+			"runtime_mins": true,
+		}
+		// 解析多字段（逗号分隔）
+		sortFields := strings.Split(sortBy, ",")
+		sortDirs := []string{"ASC", "ASC"}
+		if order != "" {
+			dirParts := strings.Split(order, ",")
+			for i, d := range dirParts {
+				if d == "desc" || d == "DESC" {
+					sortDirs[i] = "DESC"
+				}
 			}
-			if sortBy == "release_date" || sortBy == "runtime_mins" {
-				orderClause = fmt.Sprintf("ORDER BY %s %s NULLS LAST", sortBy, dir)
-			} else {
-				orderClause = fmt.Sprintf("ORDER BY %s %s", sortBy, dir)
+		}
+		var clauses []string
+		for i, sf := range sortFields {
+			sf = strings.TrimSpace(sf)
+			if validSortFields[sf] {
+				dir := "ASC"
+				if i < len(sortDirs) {
+					dir = sortDirs[i]
+				}
+				if nullsLastFields[sf] {
+					clauses = append(clauses, fmt.Sprintf("%s %s NULLS LAST", sf, dir))
+				} else {
+					clauses = append(clauses, fmt.Sprintf("%s %s", sf, dir))
+				}
 			}
+		}
+		if len(clauses) > 0 {
+			orderClause = "ORDER BY " + strings.Join(clauses, ", ")
 		} else {
 			orderClause = "ORDER BY release_date DESC NULLS LAST, content_id DESC"
 		}
