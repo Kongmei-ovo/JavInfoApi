@@ -85,6 +85,12 @@
             "schema": { "type": "string" }
           },
           {
+            "name": "year",
+            "in": "query",
+            "description": "发行年份筛选",
+            "schema": { "type": "integer" }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "页码，从1开始",

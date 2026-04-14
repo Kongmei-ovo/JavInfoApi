@@ -383,6 +383,7 @@ func searchVideos(c *gin.Context) {
 	actressName := c.Query("actress_name")
 	categoryID := getQueryInt(c, "category_id", 0)
 	categoryName := c.Query("category_name")
+	year := getQueryInt(c, "year", 0)
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
 	sortBy := c.Query("sort_by")
@@ -533,6 +534,12 @@ func searchVideos(c *gin.Context) {
 				whereClause += fmt.Sprintf(" AND content_id IN (SELECT content_id FROM derived_video_category WHERE category_id IN (%s))", strings.Join(placeholders, ","))
 			}
 		}
+	}
+
+	if year > 0 {
+		whereClause += fmt.Sprintf(" AND EXTRACT(YEAR FROM release_date) = $%d", argIndex)
+		args = append(args, year)
+		argIndex++
 	}
 
 	var totalCount int

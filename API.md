@@ -191,6 +191,7 @@ HTTP状态码：
 | actress_name | string | 否 | 演员名称（模糊匹配） | `actress_name=Yui` |
 | category_id | int | 否 | 分类ID | `category_id=4024` |
 | category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
+| year | int | 否 | 发行年份 | `year=2023` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
 | sort_by | string | 否 | 排序字段及方向，格式：field:dir | `sort_by=release_date:asc` |
