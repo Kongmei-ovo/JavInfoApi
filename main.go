@@ -386,7 +386,6 @@ func searchVideos(c *gin.Context) {
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
 	sortBy := c.Query("sort_by")
-	order := c.Query("order")
 	random := c.Query("random")
 
 	if pageSize > 100 {
@@ -561,29 +560,31 @@ func searchVideos(c *gin.Context) {
 			"release_date": true,
 			"runtime_mins": true,
 		}
-		// 解析多字段（逗号分隔）
-		sortFields := strings.Split(sortBy, ",")
-		sortDirs := []string{"ASC", "ASC"}
-		if order != "" {
-			dirParts := strings.Split(order, ",")
-			for i, d := range dirParts {
-				if d == "desc" || d == "DESC" {
-					sortDirs[i] = "DESC"
+		// 解析格式: field1:asc,field2:desc,field3:asc
+		var clauses []string
+		sortParts := strings.Split(sortBy, ",")
+		for _, part := range sortParts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			// 分离字段和方向
+			field := part
+			dir := "ASC"
+			if idx := strings.LastIndex(part, ":"); idx > 0 {
+				field = part[:idx]
+				dirPart := strings.ToLower(part[idx+1:])
+				if dirPart == "desc" {
+					dir = "DESC"
+				} else {
+					dir = "ASC"
 				}
 			}
-		}
-		var clauses []string
-		for i, sf := range sortFields {
-			sf = strings.TrimSpace(sf)
-			if validSortFields[sf] {
-				dir := "ASC"
-				if i < len(sortDirs) {
-					dir = sortDirs[i]
-				}
-				if nullsLastFields[sf] {
-					clauses = append(clauses, fmt.Sprintf("%s %s NULLS LAST", sf, dir))
+			if validSortFields[field] {
+				if nullsLastFields[field] {
+					clauses = append(clauses, fmt.Sprintf("%s %s NULLS LAST", field, dir))
 				} else {
-					clauses = append(clauses, fmt.Sprintf("%s %s", sf, dir))
+					clauses = append(clauses, fmt.Sprintf("%s %s", field, dir))
 				}
 			}
 		}

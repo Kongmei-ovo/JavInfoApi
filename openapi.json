@@ -99,13 +99,7 @@
           {
             "name": "sort_by",
             "in": "query",
-            "description": "排序字段（release_date/content_id/dvd_id/title_en/title_ja/runtime_mins）",
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "description": "排序方向（asc/desc）",
+            "description": "排序字段及方向，格式：field1:asc,field2:desc（release_date/content_id/dvd_id/title_en/title_ja/runtime_mins），默认ASC",
             "schema": { "type": "string" }
           },
           {
