@@ -195,7 +195,7 @@ HTTP状态码：
 | service_code | string | 否 | 服务代码筛选（空值不过滤） | `service_code=digital` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
-| sort_by | string | 否 | 排序字段及方向，格式：field:dir | `sort_by=release_date:asc` |
+| sort_by | string | 否 | 排序字段及方向，格式：field:dir，多字段用逗号分隔 | `sort_by=release_date:asc` 或 `sort_by=release_date:desc,title_en:asc` |
 | random | string | 否 | 随机返回（random=1） | `random=1` |
 
 **说明**:
