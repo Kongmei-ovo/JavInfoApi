@@ -91,6 +91,12 @@
             "schema": { "type": "integer" }
           },
           {
+            "name": "service_code",
+            "in": "query",
+            "description": "服务代码筛选（digital/mono/rental/ebook），空值不过滤",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "页码，从1开始",
@@ -281,6 +287,12 @@
             "name": "page_size",
             "in": "query",
             "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          },
+          {
+            "name": "service_code",
+            "in": "query",
+            "description": "服务代码筛选（digital/mono/rental/ebook），空值不过滤",
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
