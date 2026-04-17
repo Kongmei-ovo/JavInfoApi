@@ -192,6 +192,7 @@ HTTP状态码：
 | category_id | int | 否 | 分类ID | `category_id=4024` |
 | category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
 | year | int | 否 | 发行年份 | `year=2023` |
+| service_code | string | 否 | 服务代码筛选（空值不过滤） | `service_code=digital` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
 | sort_by | string | 否 | 排序字段及方向，格式：field:dir | `sort_by=release_date:asc` |
@@ -356,6 +357,7 @@ curl "http://localhost:8080/api/v1/actresses/12345"
 | id | int | 是 | 演员ID（路径参数） | |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
+| service_code | string | 否 | 服务代码筛选（空值不过滤） | `service_code=mono` |
 
 **说明**:
 - 结果按 release_date 降序排序
@@ -363,6 +365,9 @@ curl "http://localhost:8080/api/v1/actresses/12345"
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/actresses/12345/videos"
+
+# 只返回数字版
+curl "http://localhost:8080/api/v1/actresses/12345/videos?service_code=digital"
 ```
 
 ---

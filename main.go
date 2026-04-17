@@ -384,6 +384,7 @@ func searchVideos(c *gin.Context) {
 	categoryID := getQueryInt(c, "category_id", 0)
 	categoryName := c.Query("category_name")
 	year := getQueryInt(c, "year", 0)
+	serviceCode := c.Query("service_code")
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
 	sortBy := c.Query("sort_by")
@@ -539,6 +540,12 @@ func searchVideos(c *gin.Context) {
 	if year > 0 {
 		whereClause += fmt.Sprintf(" AND EXTRACT(YEAR FROM release_date) = $%d", argIndex)
 		args = append(args, year)
+		argIndex++
+	}
+
+	if serviceCode != "" {
+		whereClause += fmt.Sprintf(" AND service_code = $%d", argIndex)
+		args = append(args, serviceCode)
 		argIndex++
 	}
 
@@ -802,6 +809,7 @@ func getActressVideos(c *gin.Context) {
 	id := c.Param("id")
 	page := getQueryInt(c, "page", 1)
 	pageSize := getQueryInt(c, "page_size", 20)
+	serviceCode := c.Query("service_code")
 	if pageSize > 100 {
 		pageSize = 100
 	}
@@ -810,22 +818,32 @@ func getActressVideos(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
+	whereClause := "WHERE va.actress_id = $1"
+	args := []interface{}{id}
+	argIndex := 2
+	if serviceCode != "" {
+		whereClause += fmt.Sprintf(" AND v.service_code = $%d", argIndex)
+		args = append(args, serviceCode)
+		argIndex++
+	}
+
 	var totalCount int
-	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM derived_video_actress WHERE actress_id = $1", id).Scan(&totalCount)
+	countQuery := "SELECT COUNT(*) FROM derived_video_actress va JOIN derived_video v ON va.content_id = v.content_id " + whereClause
+	err := pool.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	args = append(args, pageSize, offset)
 	rows, err := pool.Query(ctx, `
 		SELECT v.content_id, v.dvd_id, v.title_en, v.title_ja, v.runtime_mins, v.release_date,
 			   v.jacket_thumb_url, v.site_id, v.service_code
 		FROM derived_video v
 		JOIN derived_video_actress va ON v.content_id = va.content_id
-		WHERE va.actress_id = $1
+		`+whereClause+`
 		ORDER BY v.release_date DESC NULLS LAST, v.content_id DESC
-		LIMIT $2 OFFSET $3
-	`, id, pageSize, offset)
+		LIMIT $`+fmt.Sprintf("%d", argIndex)+` OFFSET $`+fmt.Sprintf("%d", argIndex+1), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
