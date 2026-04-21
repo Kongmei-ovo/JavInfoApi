@@ -419,10 +419,13 @@ func searchVideos(c *gin.Context) {
 	}
 
 	if dvdID != "" {
+		// 匹配带横杠的原始格式，或者去掉横杠后完全相等的格式
+		// 例如查询 XRW-429 时匹配 XRW-429 和 XRW429（去掉横杠后都是 XRW429）
+		// 但不会匹配包含 XRW429 的其他番号如 XXXRW429
 		cleanDvdID := strings.ToLower(strings.ReplaceAll(dvdID, "-", ""))
-		whereClause += fmt.Sprintf(" AND LOWER(REPLACE(dvd_id, '-', '')) = $%d", argIndex)
-		args = append(args, cleanDvdID)
-		argIndex++
+		whereClause += fmt.Sprintf(" AND (dvd_id ILIKE $%d OR LOWER(REPLACE(dvd_id, '-', '')) = $%d)", argIndex, argIndex+1)
+		args = append(args, "%"+dvdID+"%", cleanDvdID)
+		argIndex += 2
 	}
 
 	if makerID > 0 {
