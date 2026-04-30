@@ -25,8 +25,10 @@
 |------|-----|
 | 基础URL | `http://localhost:8080` |
 | 数据格式 | JSON |
-| 请求方法 | GET |
+| 请求方法 | GET / POST |
 | 字符编码 | UTF-8 |
+| CORS | 支持（Access-Control-Allow-Origin: *） |
+| Graceful Shutdown | 支持（SIGINT/SIGTERM 优雅关闭） |
 
 ### 数据库规模
 
@@ -129,7 +131,7 @@
 
 ### 分页参数
 
-所有列表接口支持分页：
+所有列表接口均支持分页（包括 makers、labels、series、categories）：
 
 | 参数 | 类型 | 默认值 | 最大值 | 说明 |
 |------|------|--------|--------|------|
@@ -180,29 +182,40 @@ HTTP状态码：
 
 | 参数 | 类型 | 必填 | 说明 | 示例 |
 |------|------|------|------|------|
-| q | string | 否 | 关键词搜索（匹配标题、描述） | `q=tokyo` |
+| q | string | 否 | 关键词搜索（匹配 title_en、title_ja、comment_en、comment_ja） | `q=tokyo` |
 | content_id | string | 否 | 内容ID精确匹配 | `content_id=100tv00031` |
-| dvd_id | string | 否 | DVD编号（自动处理横杠） | `dvd_id=100TV-031` 或 `dvd_id=100TV031` |
-| maker_id | int | 否 | 厂商ID | `maker_id=1001` |
-| maker_name | string | 否 | 厂商名称（模糊匹配） | `maker_name=SOD` |
-| series_id | int | 否 | 系列ID | `series_id=211325` |
-| series_name | string | 否 | 系列名称（模糊匹配） | `series_name=Tokyo` |
-| actress_id | int | 否 | 演员ID | `actress_id=12345` |
-| actress_name | string | 否 | 演员名称（模糊匹配） | `actress_name=Yui` |
-| category_id | int | 否 | 分类ID | `category_id=4024` |
-| category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
-| year | int | 否 | 发行年份 | `year=2023` |
-| service_code | string | 否 | 服务代码筛选（空值不过滤） | `service_code=digital` |
+| dvd_id | string | 否 | DVD编号（自动处理横杠，不区分大小写） | `dvd_id=100TV-031` 或 `dvd_id=100TV031` |
+| maker_id | int | 否 | 厂商ID（精确匹配，优先于 maker_name） | `maker_id=1001` |
+| maker_name | string | 否 | 厂商名称（模糊匹配 name_en/name_ja） | `maker_name=SOD` |
+| series_id | int | 否 | 系列ID（精确匹配，优先于 series_name） | `series_id=211325` |
+| series_name | string | 否 | 系列名称（模糊匹配 name_en/name_ja） | `series_name=Tokyo` |
+| actress_id | int | 否 | 演员ID（精确匹配，优先于 actress_name） | `actress_id=12345` |
+| actress_name | string | 否 | 演员名称（模糊匹配 name_romaji/name_kanji/name_kana） | `actress_name=Yui` |
+| category_id | int | 否 | 分类ID（精确匹配，优先于 category_name） | `category_id=4024` |
+| category_name | string | 否 | 分类名称（模糊匹配 name_en/name_ja） | `category_name=Amateur` |
+| label_id | int | 否 | 品牌ID（精确匹配，优先于 label_name） | `label_id=46007` |
+| label_name | string | 否 | 品牌名称（模糊匹配 name_en/name_ja） | `label_name=SOD` |
+| site_id | int | 否 | 站点ID（1=DMM.com, 2=FANZA） | `site_id=2` |
+| year | int | 否 | 发行年份（精确匹配，优先于 year_from/year_to） | `year=2023` |
+| year_from | int | 否 | 发行年份起始（含） | `year_from=2020` |
+| year_to | int | 否 | 发行年份结束（含） | `year_to=2023` |
+| runtime_min | int | 否 | 最小时长（分钟） | `runtime_min=60` |
+| runtime_max | int | 否 | 最大时长（分钟） | `runtime_max=120` |
+| release_date_from | string | 否 | 发售日期起始（YYYY-MM-DD，含） | `release_date_from=2023-01-01` |
+| release_date_to | string | 否 | 发售日期结束（YYYY-MM-DD，含） | `release_date_to=2023-12-31` |
+| service_code | string | 否 | 服务代码筛选（digital/mono/rental/ebook），空值不过滤 | `service_code=digital` |
 | page | int | 否 | 页码 | `page=1` |
 | page_size | int | 否 | 每页数量 | `page_size=20` |
 | sort_by | string | 否 | 排序字段及方向，格式：field:dir，多字段用逗号分隔 | `sort_by=release_date:asc` 或 `sort_by=release_date:desc,title_en:asc` |
-| random | string | 否 | 随机返回（random=1） | `random=1` |
+| random | string | 否 | 随机返回（random=1），与 sort_by 互斥 | `random=1` |
 
 **说明**:
 - `dvd_id` 搜索时会自动去除横杠和转换为小写，支持 `ABC-123`、`ABC123`、`abc123` 等格式
-- `q` 参数使用 ILIKE 模糊匹配，会匹配 title_en、title_ja、comment_en
+- `q` 参数使用 ILIKE 模糊匹配，会匹配 title_en、title_ja、comment_en、comment_ja
 - `*_name` 参数使用 ILIKE 模糊匹配，支持名称模糊搜索
 - `*_id` 和 `*_name` 同时存在时，优先使用 `*_id`
+- `year` 与 `year_from`/`year_to` 同时存在时，优先使用 `year`
+- `release_date_from`/`release_date_to` 必须为 `YYYY-MM-DD` 格式，否则返回 400
 - 多个条件同时使用时为 AND 关系
 - `sort_by` 格式：`字段:方向`，多字段用逗号分隔，如 `release_date:asc,title_en:desc`
 - 支持字段：release_date、content_id、dvd_id、title_en、title_ja、runtime_mins
@@ -241,6 +254,21 @@ curl "http://localhost:8080/api/v1/videos/search?random=1&page_size=10"
 
 # 组合搜索
 curl "http://localhost:8080/api/v1/videos/search?maker_name=SOD&category_name=Amateur&page=1"
+
+# 按品牌搜索
+curl "http://localhost:8080/api/v1/videos/search?label_name=SOD&page=1"
+
+# 按站点筛选
+curl "http://localhost:8080/api/v1/videos/search?site_id=2&page_size=10"
+
+# 按年份范围搜索
+curl "http://localhost:8080/api/v1/videos/search?year_from=2020&year_to=2023&page_size=10"
+
+# 按时长筛选
+curl "http://localhost:8080/api/v1/videos/search?runtime_min=60&runtime_max=120"
+
+# 按日期范围搜索
+curl "http://localhost:8080/api/v1/videos/search?release_date_from=2023-01-01&release_date_to=2023-03-31"
 ```
 
 ---
@@ -283,6 +311,7 @@ curl "http://localhost:8080/api/v1/videos?page=1&page_size=20"
 | service_code | string | 否 | 服务代码筛选 | `service_code=FANZA` |
 
 **说明**:
+- `content_id` 不能为空，否则返回 400
 - 返回完整视频信息，包括关联的演员、厂商、品牌、系列、题材分类
 - 演员信息通过 `derived_video_actress` 关联表获取，按 ordinality 排序
 - 题材分类通过 `derived_video_category` 关联表获取，按 name_en 排序
@@ -298,11 +327,64 @@ curl "http://localhost:8080/api/v1/videos/100tv00031?service_code=digital"
 
 ---
 
+#### 4. 批量获取视频详情
+
+**接口**: `POST /api/v1/videos/batch`
+
+**描述**: 根据 content_id 列表批量获取视频完整信息（含关联数据）
+
+**请求体** (JSON):
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| ids | string[] | 是 | content_id 列表，最多100个 |
+
+**说明**:
+- 返回视频详情数组，包含 maker、label、series、actresses、categories 等关联数据
+- 最多支持 100 个 id，超出返回 400 错误
+- 不存在的 id 会被静默跳过
+
+**示例**:
+```bash
+curl -X POST "http://localhost:8080/api/v1/videos/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"ids": ["100tv00031", "118abc001", "ssis00001"]}'
+```
+
+---
+
+#### 5. 批量番号查找视频
+
+**接口**: `POST /api/v1/videos/lookup`
+
+**描述**: 根据 dvd_id 列表批量查找视频（自动处理横杠和大小写）
+
+**请求体** (JSON):
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| dvd_ids | string[] | 是 | dvd_id 列表，最多100个 |
+
+**说明**:
+- 返回 `{dvd_id: video}` 映射，key 为数据库中的原始 dvd_id
+- 支持 `ABC-001`、`ABC001`、`abc-001` 等格式
+- 最多支持 100 个 dvd_id
+- 未找到的番号不会出现在返回结果中
+
+**示例**:
+```bash
+curl -X POST "http://localhost:8080/api/v1/videos/lookup" \
+  -H "Content-Type: application/json" \
+  -d '{"dvd_ids": ["SSIS-001", "ABP-001", "IPX001"]}'
+```
+
+---
+
 ### 演员相关
 
 ---
 
-#### 4. 演员列表
+#### 6. 演员列表
 
 **接口**: `GET /api/v1/actresses`
 
@@ -312,20 +394,26 @@ curl "http://localhost:8080/api/v1/videos/100tv00031?service_code=digital"
 
 | 参数 | 类型 | 必填 | 说明 | 示例 |
 |------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_romaji/name_kanji/name_kana） | `q=Yui` |
 | page | int | 否 | 页码 | `page=1` |
-| page_size | int | 否 | 每页数量 | `page_size=50` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
 
 **说明**:
-- 结果按 name_romaji 升序排序
+- 结果按 movie_count 降序排序（作品多的排前面）
+- `q` 参数使用 ILIKE 模糊匹配
+- 返回字段包含 `movie_count`（作品数量）
 
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/actresses?page=1&page_size=50"
+
+# 按名字搜索
+curl "http://localhost:8080/api/v1/actresses?q=Yui"
 ```
 
 ---
 
-#### 5. 演员详情
+#### 7. 演员详情
 
 **接口**: `GET /api/v1/actresses/:id`
 
@@ -337,6 +425,9 @@ curl "http://localhost:8080/api/v1/actresses?page=1&page_size=50"
 |------|------|------|------|------|
 | id | int | 是 | 演员ID（路径参数） | |
 
+**说明**:
+- `id` 必须为正整数，否则返回 400
+
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/actresses/12345"
@@ -344,7 +435,7 @@ curl "http://localhost:8080/api/v1/actresses/12345"
 
 ---
 
-#### 6. 演员作品列表
+#### 8. 演员作品列表
 
 **接口**: `GET /api/v1/actresses/:id/videos`
 
@@ -356,11 +447,18 @@ curl "http://localhost:8080/api/v1/actresses/12345"
 |------|------|------|------|------|
 | id | int | 是 | 演员ID（路径参数） | |
 | page | int | 否 | 页码 | `page=1` |
-| page_size | int | 否 | 每页数量 | `page_size=20` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=20` |
 | service_code | string | 否 | 服务代码筛选（空值不过滤） | `service_code=mono` |
+| year | int | 否 | 发行年份筛选 | `year=2023` |
+| maker_id | int | 否 | 厂商ID（精确匹配，优先于 maker_name） | `maker_id=1001` |
+| maker_name | string | 否 | 厂商名称（模糊匹配） | `maker_name=SOD` |
+| category_id | int | 否 | 分类ID（精确匹配，优先于 category_name） | `category_id=4024` |
+| category_name | string | 否 | 分类名称（模糊匹配） | `category_name=Amateur` |
+| sort_by | string | 否 | 排序字段及方向，格式：field:dir | `sort_by=release_date:asc` |
 
 **说明**:
-- 结果按 release_date 降序排序
+- 默认按 release_date 降序排序
+- `sort_by` 支持字段：release_date、content_id、dvd_id、title_en、title_ja、runtime_mins
 
 **示例**:
 ```bash
@@ -368,6 +466,43 @@ curl "http://localhost:8080/api/v1/actresses/12345/videos"
 
 # 只返回数字版
 curl "http://localhost:8080/api/v1/actresses/12345/videos?service_code=digital"
+
+# 按年份筛选
+curl "http://localhost:8080/api/v1/actresses/12345/videos?year=2023"
+
+# 按厂商筛选
+curl "http://localhost:8080/api/v1/actresses/12345/videos?maker_name=SOD"
+
+# 按分类筛选
+curl "http://localhost:8080/api/v1/actresses/12345/videos?category_name=Amateur"
+```
+
+---
+
+#### 9. 批量获取演员作品
+
+**接口**: `POST /api/v1/actresses/batch_videos`
+
+**描述**: 根据演员ID列表批量获取作品，最多20个演员
+
+**请求体** (JSON):
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| ids | int[] | 是 | 演员ID列表，最多20个 |
+| page | int | 否 | 页码（默认1） |
+| page_size | int | 否 | 每页数量（默认20，最大100） |
+
+**说明**:
+- 返回 `{actress_id: {total_count, videos}}` 映射
+- 每个演员的作品独立分页
+- 最多支持 20 个演员 ID
+
+**示例**:
+```bash
+curl -X POST "http://localhost:8080/api/v1/actresses/batch_videos" \
+  -H "Content-Type: application/json" \
+  -d '{"ids": [12345, 67890], "page": 1, "page_size": 10}'
 ```
 
 ---
@@ -376,81 +511,121 @@ curl "http://localhost:8080/api/v1/actresses/12345/videos?service_code=digital"
 
 ---
 
-#### 7. 厂商列表
+#### 10. 厂商列表
 
 **接口**: `GET /api/v1/makers`
 
-**描述**: 获取所有制作厂商
+**描述**: 获取制作厂商分页列表
 
-**参数**: 无分页参数（数据量小，6,831条）
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_en/name_ja） | `q=SOD` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
 
 **说明**:
 - 结果按 name_en 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
 
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/makers"
+
+# 搜索厂商
+curl "http://localhost:8080/api/v1/makers?q=SOD"
 ```
 
 **用途**: 下拉选择、搜索时展示厂商名称
 
 ---
 
-#### 8. 品牌列表
+#### 11. 品牌列表
 
 **接口**: `GET /api/v1/labels`
 
-**描述**: 获取所有品牌系列
+**描述**: 获取品牌分页列表
 
-**参数**: 无分页参数（数据量小，13,032条）
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_en/name_ja） | `q=SOD` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
 
 **说明**:
 - 结果按 name_en 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
 
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/labels"
+
+# 搜索品牌
+curl "http://localhost:8080/api/v1/labels?q=SOD"
 ```
 
 ---
 
-#### 9. 系列列表
+#### 12. 系列列表
 
 **接口**: `GET /api/v1/series`
 
-**描述**: 获取所有影片系列
+**描述**: 获取影片系列分页列表
 
-**参数**: 无分页参数（数据量小，93,536条）
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_en/name_ja） | `q=Tokyo` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
 
 **说明**:
 - 结果按 name_en 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
 
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/series"
+
+# 搜索系列
+curl "http://localhost:8080/api/v1/series?q=Tokyo"
 ```
 
 ---
 
-#### 10. 题材分类列表
+#### 13. 题材分类列表
 
 **接口**: `GET /api/v1/categories`
 
-**描述**: 获取所有题材分类
+**描述**: 获取题材分类分页列表
 
-**参数**: 无分页参数（数据量小，984条）
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_en/name_ja） | `q=Amateur` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
 
 **说明**:
 - 结果按 name_en 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
 
 **示例**:
 ```bash
 curl "http://localhost:8080/api/v1/categories"
+
+# 搜索分类
+curl "http://localhost:8080/api/v1/categories?q=Amateur"
 ```
 
 ---
 
-#### 11. 题材分类统计
+#### 14. 题材分类统计
 
 **接口**: `GET /api/v1/categories/stats`
 
@@ -491,7 +666,7 @@ curl "http://localhost:8080/api/v1/categories/stats"
 
 ---
 
-#### 11. 统计数据
+#### 15. 统计数据
 
 **接口**: `GET /api/v1/stats`
 
@@ -517,7 +692,7 @@ curl "http://localhost:8080/api/v1/stats"
 
 ---
 
-#### 12. 健康检查
+#### 16. 健康检查
 
 **接口**: `GET /health`
 
@@ -625,6 +800,7 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
       "content_id": "100tv00031",
       "dvd_id": "100TV-031",
       "title_en": "This Is What Happened When I Stripped A Sch**lgirl Down To One Pair Of Socks And Inserted My Cock Into Her... 2 Mio Chihana",
+      "title_ja": "女子○生を靴下一丁にひん剥いて挿入してみたら…2 ちーちゃん",
       "runtime_mins": 13,
       "release_date": "2019-07-21",
       "jacket_thumb_url": "digital/video/100tv00031/100tv00031ps",
@@ -682,7 +858,8 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
       "name_romaji": "Mio Chihana",
       "name_kanji": "千華ねむ",
       "name_kana": "ちーはな みお",
-      "image_url": "..."
+      "image_url": "...",
+      "ordinality": 1
     }
   ],
   "categories": [
@@ -712,21 +889,27 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
 }
 ```
 
-### 厂商列表响应（部分）
+### 厂商列表响应
 
 ```json
-[
-  {
-    "id": 1001,
-    "name_en": "(TQT)",
-    "name_ja": "（TQT）"
-  },
-  {
-    "id": 5439,
-    "name_en": "*Shusei",
-    "name_ja": "○修正"
-  }
-]
+{
+  "data": [
+    {
+      "id": 1001,
+      "name_en": "(TQT)",
+      "name_ja": "（TQT）"
+    },
+    {
+      "id": 5439,
+      "name_en": "*Shusei",
+      "name_ja": "○修正"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total_count": 6831,
+  "total_pages": 342
+}
 ```
 
 ---
@@ -754,7 +937,13 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
 | HTTP状态码 | error 消息 | 说明 |
 |-----------|-----------|------|
 | 200 | - | 成功 |
-| 400 | bad request | 参数错误 |
+| 400 | invalid request body | 批量接口请求体格式错误 |
+| 400 | ids is required and must not be empty | 批量接口缺少 ids 参数 |
+| 400 | maximum 100 ids per request | 批量接口超过数量限制 |
+| 400 | release_date_from must be YYYY-MM-DD format | 日期格式错误 |
+| 400 | release_date_to must be YYYY-MM-DD format | 日期格式错误 |
+| 400 | id must be a positive integer | 演员ID格式错误 |
+| 400 | content_id is required | 视频ID为空 |
 | 404 | video not found | 视频不存在 |
 | 404 | actress not found | 演员不存在 |
 | 500 | database error | 数据库错误 |

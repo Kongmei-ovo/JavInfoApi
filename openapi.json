@@ -3,7 +3,7 @@
   "info": {
     "title": "JavInfoApi",
     "description": "媒体元数据查询 API，基于 r18.dev 数据库（PostgreSQL）",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "servers": [
     {
@@ -15,13 +15,13 @@
     "/api/v1/videos/search": {
       "get": {
         "summary": "搜索视频",
-        "description": "多条件组合搜索视频",
+        "description": "多条件组合搜索视频。release_date_from/release_date_to 必须为 YYYY-MM-DD 格式，否则返回 400",
         "operationId": "searchVideos",
         "parameters": [
           {
             "name": "q",
             "in": "query",
-            "description": "关键词搜索（匹配标题、描述）",
+            "description": "关键词搜索（匹配 title_en、title_ja、comment_en、comment_ja）",
             "schema": { "type": "string" }
           },
           {
@@ -33,62 +33,116 @@
           {
             "name": "dvd_id",
             "in": "query",
-            "description": "DVD编号（自动处理横杠）",
+            "description": "DVD编号（自动处理横杠，不区分大小写）",
             "schema": { "type": "string" }
           },
           {
             "name": "maker_id",
             "in": "query",
-            "description": "厂商ID",
+            "description": "厂商ID（精确匹配，优先于 maker_name）",
             "schema": { "type": "integer" }
           },
           {
             "name": "maker_name",
             "in": "query",
-            "description": "厂商名称（模糊匹配）",
+            "description": "厂商名称（模糊匹配 name_en/name_ja）",
             "schema": { "type": "string" }
           },
           {
             "name": "series_id",
             "in": "query",
-            "description": "系列ID",
+            "description": "系列ID（精确匹配，优先于 series_name）",
             "schema": { "type": "integer" }
           },
           {
             "name": "series_name",
             "in": "query",
-            "description": "系列名称（模糊匹配）",
+            "description": "系列名称（模糊匹配 name_en/name_ja）",
             "schema": { "type": "string" }
           },
           {
             "name": "actress_id",
             "in": "query",
-            "description": "演员ID",
+            "description": "演员ID（精确匹配，优先于 actress_name）",
             "schema": { "type": "integer" }
           },
           {
             "name": "actress_name",
             "in": "query",
-            "description": "演员名称（模糊匹配）",
+            "description": "演员名称（模糊匹配 name_romaji/name_kanji/name_kana）",
             "schema": { "type": "string" }
           },
           {
             "name": "category_id",
             "in": "query",
-            "description": "分类ID",
+            "description": "分类ID（精确匹配，优先于 category_name）",
             "schema": { "type": "integer" }
           },
           {
             "name": "category_name",
             "in": "query",
-            "description": "分类名称（模糊匹配）",
+            "description": "分类名称（模糊匹配 name_en/name_ja）",
             "schema": { "type": "string" }
+          },
+          {
+            "name": "label_id",
+            "in": "query",
+            "description": "品牌ID（精确匹配，优先于 label_name）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "label_name",
+            "in": "query",
+            "description": "品牌名称（模糊匹配 name_en/name_ja）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "description": "站点ID（1=DMM.com, 2=FANZA）",
+            "schema": { "type": "integer" }
           },
           {
             "name": "year",
             "in": "query",
-            "description": "发行年份筛选",
+            "description": "发行年份（精确匹配，优先于 year_from/year_to）",
             "schema": { "type": "integer" }
+          },
+          {
+            "name": "year_from",
+            "in": "query",
+            "description": "发行年份起始（含）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "year_to",
+            "in": "query",
+            "description": "发行年份结束（含）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "runtime_min",
+            "in": "query",
+            "description": "最小时长（分钟）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "runtime_max",
+            "in": "query",
+            "description": "最大时长（分钟）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "release_date_from",
+            "in": "query",
+            "description": "发售日期起始（YYYY-MM-DD，含）",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "release_date_to",
+            "in": "query",
+            "description": "发售日期结束（YYYY-MM-DD，含）",
+            "schema": { "type": "string", "format": "date" }
           },
           {
             "name": "service_code",
@@ -191,8 +245,110 @@
               }
             }
           },
+          "400": {
+            "description": "content_id 为空",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
           "404": {
             "description": "视频不存在",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/batch": {
+      "post": {
+        "summary": "批量获取视频详情",
+        "description": "根据 content_id 列表批量获取视频完整信息（含关联数据），最多100个",
+        "operationId": "batchGetVideos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["ids"],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "maxItems": 100,
+                    "description": "content_id 列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/VideoDetailResponse" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/lookup": {
+      "post": {
+        "summary": "批量番号查找视频",
+        "description": "根据 dvd_id 列表批量查找视频（自动处理横杠和大小写），最多100个。返回 dvd_id -> video 的映射",
+        "operationId": "batchLookupVideos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["dvd_ids"],
+                "properties": {
+                  "dvd_ids": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "maxItems": 100,
+                    "description": "dvd_id 列表（支持 ABC-001 或 ABC001 格式）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功，返回 {dvd_id: video} 映射",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "$ref": "#/components/schemas/VideoDetailResponse" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ErrorResponse" }
@@ -208,6 +364,12 @@
         "description": "获取演员分页列表",
         "operationId": "listActresses",
         "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配 name_romaji/name_kanji/name_kana）",
+            "schema": { "type": "string" }
+          },
           {
             "name": "page",
             "in": "query",
@@ -254,6 +416,14 @@
               }
             }
           },
+          "400": {
+            "description": "id 不是正整数",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
           "404": {
             "description": "演员不存在",
             "content": {
@@ -293,6 +463,42 @@
             "in": "query",
             "description": "服务代码筛选（digital/mono/rental/ebook），空值不过滤",
             "schema": { "type": "string" }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "发行年份筛选",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "maker_id",
+            "in": "query",
+            "description": "厂商ID（精确匹配，优先于 maker_name）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "maker_name",
+            "in": "query",
+            "description": "厂商名称（模糊匹配）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "分类ID（精确匹配，优先于 category_name）",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "category_name",
+            "in": "query",
+            "description": "分类名称（模糊匹配）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "排序字段及方向，格式：field:dir（release_date/content_id/dvd_id/title_en/title_ja/runtime_mins）",
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -307,20 +513,102 @@
         }
       }
     },
+    "/api/v1/actresses/batch_videos": {
+      "post": {
+        "summary": "批量获取演员作品",
+        "description": "根据演员ID列表批量获取作品，最多20个演员。返回 actress_id -> {total_count, videos} 映射",
+        "operationId": "batchActressVideos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["ids"],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "maxItems": 20,
+                    "description": "演员ID列表"
+                  },
+                  "page": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "页码"
+                  },
+                  "page_size": {
+                    "type": "integer",
+                    "default": 20,
+                    "maximum": 100,
+                    "description": "每页数量"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功，返回 {actress_id: {total_count, videos}} 映射",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "total_count": { "type": "integer" },
+                      "videos": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/VideoSummary" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/makers": {
       "get": {
         "summary": "厂商列表",
-        "description": "获取所有制作厂商（无分页，数据量小）",
+        "description": "获取制作厂商分页列表",
         "operationId": "listMakers",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配 name_en/name_ja）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "成功",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Maker" }
-                }
+                "schema": { "$ref": "#/components/schemas/MakerListResponse" }
               }
             }
           }
@@ -330,17 +618,32 @@
     "/api/v1/labels": {
       "get": {
         "summary": "品牌列表",
-        "description": "获取所有品牌系列（无分页，数据量小）",
+        "description": "获取品牌分页列表",
         "operationId": "listLabels",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配 name_en/name_ja）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "成功",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Label" }
-                }
+                "schema": { "$ref": "#/components/schemas/LabelListResponse" }
               }
             }
           }
@@ -350,17 +653,32 @@
     "/api/v1/series": {
       "get": {
         "summary": "系列列表",
-        "description": "获取所有影片系列（无分页，数据量小）",
+        "description": "获取影片系列分页列表",
         "operationId": "listSeries",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配 name_en/name_ja）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "成功",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Series" }
-                }
+                "schema": { "$ref": "#/components/schemas/SeriesListResponse" }
               }
             }
           }
@@ -370,17 +688,32 @@
     "/api/v1/categories": {
       "get": {
         "summary": "题材分类列表",
-        "description": "获取所有题材分类（无分页，数据量小）",
+        "description": "获取题材分类分页列表",
         "operationId": "listCategories",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "关键词搜索（匹配 name_en/name_ja）",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 100 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "成功",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Category" }
-                }
+                "schema": { "$ref": "#/components/schemas/CategoryListResponse" }
               }
             }
           }
@@ -463,6 +796,7 @@
           "content_id": { "type": "string" },
           "dvd_id": { "type": "string" },
           "title_en": { "type": "string" },
+          "title_ja": { "type": "string" },
           "runtime_mins": { "type": "integer" },
           "release_date": { "type": "string", "format": "date" },
           "jacket_thumb_url": { "type": "string" },
@@ -496,7 +830,7 @@
           "series": { "$ref": "#/components/schemas/Series" },
           "actresses": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ActressDetailResponse" }
+            "items": { "$ref": "#/components/schemas/ActressWithOrdinality" }
           },
           "categories": {
             "type": "array",
@@ -519,12 +853,14 @@
       },
       "ActressSummary": {
         "type": "object",
+        "description": "演员列表项，包含作品数量",
         "properties": {
           "id": { "type": "integer" },
           "name_romaji": { "type": "string" },
           "name_kanji": { "type": "string" },
           "name_kana": { "type": "string" },
-          "image_url": { "type": "string" }
+          "image_url": { "type": "string" },
+          "movie_count": { "type": "integer", "description": "作品数量" }
         }
       },
       "ActressDetailResponse": {
@@ -537,12 +873,37 @@
           "image_url": { "type": "string" }
         }
       },
+      "ActressWithOrdinality": {
+        "type": "object",
+        "description": "视频详情中的演员信息，包含排序序号",
+        "properties": {
+          "id": { "type": "integer" },
+          "name_romaji": { "type": "string" },
+          "name_kanji": { "type": "string" },
+          "name_kana": { "type": "string" },
+          "image_url": { "type": "string" },
+          "ordinality": { "type": "integer", "description": "演员在该视频中的排序序号" }
+        }
+      },
       "Maker": {
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
           "name_en": { "type": "string" },
           "name_ja": { "type": "string" }
+        }
+      },
+      "MakerListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Maker" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
         }
       },
       "Label": {
@@ -553,6 +914,19 @@
           "name_ja": { "type": "string" }
         }
       },
+      "LabelListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Label" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
+        }
+      },
       "Series": {
         "type": "object",
         "properties": {
@@ -561,12 +935,38 @@
           "name_ja": { "type": "string" }
         }
       },
+      "SeriesListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Series" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
+        }
+      },
       "Category": {
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
           "name_en": { "type": "string" },
           "name_ja": { "type": "string" }
+        }
+      },
+      "CategoryListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Category" }
+          },
+          "page": { "type": "integer" },
+          "page_size": { "type": "integer" },
+          "total_count": { "type": "integer" },
+          "total_pages": { "type": "integer" }
         }
       },
       "CategoryWithCount": {
