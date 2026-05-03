@@ -558,6 +558,11 @@ func loadRelatedData(ctx context.Context, video *Video) {
 	}()
 
 	wg.Wait()
+
+	// Supplement missing actress names via Wikidata
+	if len(video.Actresses) > 0 {
+		supplementActressNames(video.Actresses)
+	}
 }
 
 // loadRelatedDataBatch loads related data for multiple videos efficiently.
@@ -814,6 +819,13 @@ func loadRelatedDataBatch(ctx context.Context, videos []Video) {
 	}()
 
 	wg.Wait()
+
+	// Supplement missing actress names via Wikidata
+	for _, v := range videos {
+		if len(v.Actresses) > 0 {
+			supplementActressNames(v.Actresses)
+		}
+	}
 }
 
 func mapKeys(m map[int]bool) []int {
