@@ -56,6 +56,57 @@ func listCategories(c *gin.Context) {
 	})
 }
 
+func listDirectors(c *gin.Context) {
+	listEntity(listEntityParams{
+		ctx:         c.Request.Context(),
+		c:           c,
+		table:       "derived_director",
+		searchCols:  []string{"name_romaji", "name_kanji", "name_kana"},
+		countQuery:  "SELECT COUNT(*) FROM derived_director",
+		selectQuery: "SELECT id, name_romaji, name_kanji, name_kana FROM derived_director",
+		defaultSort: "ORDER BY name_kanji",
+		scanFn: func(rows pgx.Rows) (interface{}, error) {
+			var d Director
+			err := rows.Scan(&d.ID, &d.NameRomaji, &d.NameKanji, &d.NameKana)
+			return d, err
+		},
+	})
+}
+
+func listActors(c *gin.Context) {
+	listEntity(listEntityParams{
+		ctx:         c.Request.Context(),
+		c:           c,
+		table:       "derived_actor",
+		searchCols:  []string{"name_kanji", "name_kana"},
+		countQuery:  "SELECT COUNT(*) FROM derived_actor",
+		selectQuery: "SELECT id, name_kanji, name_kana FROM derived_actor",
+		defaultSort: "ORDER BY name_kanji",
+		scanFn: func(rows pgx.Rows) (interface{}, error) {
+			var a Actor
+			err := rows.Scan(&a.ID, &a.NameKanji, &a.NameKana)
+			return a, err
+		},
+	})
+}
+
+func listAuthors(c *gin.Context) {
+	listEntity(listEntityParams{
+		ctx:         c.Request.Context(),
+		c:           c,
+		table:       "derived_author",
+		searchCols:  []string{"name_kanji", "name_kana"},
+		countQuery:  "SELECT COUNT(*) FROM derived_author",
+		selectQuery: "SELECT id, name_kanji, name_kana FROM derived_author",
+		defaultSort: "ORDER BY name_kanji",
+		scanFn: func(rows pgx.Rows) (interface{}, error) {
+			var a Author
+			err := rows.Scan(&a.ID, &a.NameKanji, &a.NameKana)
+			return a, err
+		},
+	})
+}
+
 func getCategoryStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()

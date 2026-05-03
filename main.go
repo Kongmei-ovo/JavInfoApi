@@ -60,6 +60,9 @@ func main() {
 	r.GET("/api/v1/series", listSeries)
 	r.GET("/api/v1/categories", listCategories)
 	r.GET("/api/v1/categories/stats", getCategoryStats)
+	r.GET("/api/v1/directors", listDirectors)
+	r.GET("/api/v1/actors", listActors)
+	r.GET("/api/v1/authors", listAuthors)
 
 	// Stats
 	r.GET("/api/v1/stats", getStats)
