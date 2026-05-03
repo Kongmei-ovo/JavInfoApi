@@ -25,6 +25,10 @@ type Video struct {
 	Series         *Series   `json:"series,omitempty"`
 	Actresses      []Actress `json:"actresses,omitempty"`
 	Categories     []Category `json:"categories,omitempty"`
+	Directors      []Director `json:"directors,omitempty"`
+	Actors         []Actor    `json:"actors,omitempty"`
+	Authors        []Author   `json:"authors,omitempty"`
+	ImageURL       *string    `json:"image_url,omitempty"`
 }
 
 // Actress represents an actress
@@ -63,6 +67,28 @@ type Category struct {
 	ID     int    `json:"id"`
 	NameEn string `json:"name_en"`
 	NameJa *string `json:"name_ja,omitempty"`
+}
+
+// Director represents a video director
+type Director struct {
+	ID         int     `json:"id"`
+	NameRomaji *string `json:"name_romaji,omitempty"`
+	NameKanji  *string `json:"name_kanji,omitempty"`
+	NameKana   *string `json:"name_kana,omitempty"`
+}
+
+// Actor represents a male actor (histrion)
+type Actor struct {
+	ID        int     `json:"id"`
+	NameKanji *string `json:"name_kanji,omitempty"`
+	NameKana  *string `json:"name_kana,omitempty"`
+}
+
+// Author represents a video author (manga/doujinshi)
+type Author struct {
+	ID        int     `json:"id"`
+	NameKanji *string `json:"name_kanji,omitempty"`
+	NameKana  *string `json:"name_kana,omitempty"`
 }
 
 // CategoryWithCount represents a category with its video count
