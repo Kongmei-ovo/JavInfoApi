@@ -474,6 +474,76 @@ func loadRelatedData(ctx context.Context, video *Video) {
 		}
 	}()
 
+	// Load directors
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rows, err := pool.Query(ctx, `
+			SELECT d.id, d.name_romaji, d.name_kanji, d.name_kana
+			FROM derived_director d
+			JOIN derived_video_director vd ON d.id = vd.director_id
+			WHERE vd.content_id = $1
+		`, video.ContentID)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var d Director
+			if err := rows.Scan(&d.ID, &d.NameRomaji, &d.NameKanji, &d.NameKana); err == nil {
+				video.Directors = append(video.Directors, d)
+			}
+		}
+	}()
+
+	// Load actors (male performers)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rows, err := pool.Query(ctx, `
+			SELECT a.id, a.name_kanji, a.name_kana
+			FROM derived_actor a
+			JOIN derived_video_actor va ON a.id = va.actor_id
+			WHERE va.content_id = $1
+			ORDER BY va.ordinality
+		`, video.ContentID)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var a Actor
+			if err := rows.Scan(&a.ID, &a.NameKanji, &a.NameKana); err == nil {
+				video.Actors = append(video.Actors, a)
+			}
+		}
+	}()
+
+	// Load authors
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rows, err := pool.Query(ctx, `
+			SELECT a.id, a.name_kanji, a.name_kana
+			FROM derived_author a
+			JOIN derived_video_author va ON a.id = va.author_id
+			WHERE va.content_id = $1
+		`, video.ContentID)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var a Author
+			if err := rows.Scan(&a.ID, &a.NameKanji, &a.NameKana); err == nil {
+				video.Authors = append(video.Authors, a)
+			}
+		}
+	}()
+
 	wg.Wait()
 }
 
@@ -646,6 +716,85 @@ func loadRelatedDataBatch(ctx context.Context, videos []Video) {
 			if rows.Scan(&contentID, &cat.ID, &cat.NameEn, &cat.NameJa) == nil {
 				if v, ok := videoMap[contentID]; ok {
 					v.Categories = append(v.Categories, cat)
+				}
+			}
+		}
+	}()
+
+	// Batch load directors
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		placeholders, args := makePlaceholdersStr(contentIDs)
+		rows, err := pool.Query(ctx, fmt.Sprintf(`
+			SELECT vd.content_id, d.id, d.name_romaji, d.name_kanji, d.name_kana
+			FROM derived_director d
+			JOIN derived_video_director vd ON d.id = vd.director_id
+			WHERE vd.content_id IN (%s)
+		`, placeholders), args...)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var contentID string
+			var d Director
+			if rows.Scan(&contentID, &d.ID, &d.NameRomaji, &d.NameKanji, &d.NameKana) == nil {
+				if v, ok := videoMap[contentID]; ok {
+					v.Directors = append(v.Directors, d)
+				}
+			}
+		}
+	}()
+
+	// Batch load actors
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		placeholders, args := makePlaceholdersStr(contentIDs)
+		rows, err := pool.Query(ctx, fmt.Sprintf(`
+			SELECT va.content_id, a.id, a.name_kanji, a.name_kana
+			FROM derived_actor a
+			JOIN derived_video_actor va ON a.id = va.actor_id
+			WHERE va.content_id IN (%s)
+			ORDER BY va.content_id, va.ordinality
+		`, placeholders), args...)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var contentID string
+			var a Actor
+			if rows.Scan(&contentID, &a.ID, &a.NameKanji, &a.NameKana) == nil {
+				if v, ok := videoMap[contentID]; ok {
+					v.Actors = append(v.Actors, a)
+				}
+			}
+		}
+	}()
+
+	// Batch load authors
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		placeholders, args := makePlaceholdersStr(contentIDs)
+		rows, err := pool.Query(ctx, fmt.Sprintf(`
+			SELECT va.content_id, a.id, a.name_kanji, a.name_kana
+			FROM derived_author a
+			JOIN derived_video_author va ON a.id = va.author_id
+			WHERE va.content_id IN (%s)
+		`, placeholders), args...)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var contentID string
+			var a Author
+			if rows.Scan(&contentID, &a.ID, &a.NameKanji, &a.NameKana) == nil {
+				if v, ok := videoMap[contentID]; ok {
+					v.Authors = append(v.Authors, a)
 				}
 			}
 		}
