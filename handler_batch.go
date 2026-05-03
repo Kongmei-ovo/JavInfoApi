@@ -65,6 +65,10 @@ func batchGetVideos(c *gin.Context) {
 	// Batch load related data (much more efficient than per-video)
 	loadRelatedDataBatch(ctx, videos)
 
+	for i := range videos {
+		enrichVideo(&videos[i])
+	}
+
 	c.JSON(http.StatusOK, videos)
 }
 
@@ -128,6 +132,10 @@ func batchLookupVideos(c *gin.Context) {
 
 	// Batch load related data
 	loadRelatedDataBatch(ctx, videos)
+
+	for i := range videos {
+		enrichVideo(&videos[i])
+	}
 
 	// Find which normalized IDs were not matched by dvd_id
 	matchedNorms := make(map[string]bool)

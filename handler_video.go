@@ -55,6 +55,10 @@ func listVideos(c *gin.Context) {
 		videos = append(videos, v)
 	}
 
+	for i := range videos {
+		enrichVideoLight(&videos[i])
+	}
+
 	c.JSON(http.StatusOK, PaginatedResponse{
 		Data:       videos,
 		Page:       page,
@@ -119,6 +123,8 @@ func getVideo(c *gin.Context) {
 	}
 
 	loadRelatedData(ctx, &video)
+
+	enrichVideo(&video)
 
 	c.JSON(http.StatusOK, video)
 }
@@ -318,6 +324,10 @@ func searchVideos(c *gin.Context) {
 			continue
 		}
 		videos = append(videos, v)
+	}
+
+	for i := range videos {
+		enrichVideoLight(&videos[i])
 	}
 
 	c.JSON(http.StatusOK, PaginatedResponse{

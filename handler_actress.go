@@ -194,6 +194,10 @@ func getActressVideos(c *gin.Context) {
 		videos = append(videos, v)
 	}
 
+	for i := range videos {
+		enrichVideoLight(&videos[i])
+	}
+
 	c.JSON(http.StatusOK, PaginatedResponse{
 		Data:       videos,
 		Page:       page,
@@ -283,6 +287,10 @@ func batchActressVideos(c *gin.Context) {
 					continue
 				}
 				videos = append(videos, v)
+			}
+
+			for i := range videos {
+				enrichVideoLight(&videos[i])
 			}
 
 			ch <- resultEntry{
