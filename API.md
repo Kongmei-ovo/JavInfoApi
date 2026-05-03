@@ -1,6 +1,7 @@
 # JavInfoApi 接口文档
 
 > 媒体元数据查询 API，基于 r18.dev 数据库（PostgreSQL）
+> v1.2.0 — 新增导演/男演员/作者接口，番号搜索增强，输出自动补全（decensor、图片URL、番号提取）
 
 ---
 
@@ -13,6 +14,9 @@
   - [视频相关](#视频相关)
   - [演员相关](#演员相关)
   - [辅助数据](#辅助数据)
+    - [导演列表](#14-导演列表)
+    - [男演员列表](#15-男演员列表)
+    - [作者列表](#16-作者列表)
   - [系统](#系统)
 - [调用流程](#调用流程)
 - [响应示例](#响应示例)
@@ -40,6 +44,9 @@
 | derived_label | 13,032 |
 | derived_series | 93,536 |
 | derived_category | 984 |
+| derived_director | 27,787 |
+| derived_actor | 104,971 |
+| derived_author | 8,098 |
 
 ---
 
@@ -125,6 +132,53 @@
 | content_id | varchar | 视频ID |
 | category_id | integer | 分类ID |
 
+### derived_director (导演表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| id | integer | 导演唯一ID |
+| name_romaji | varchar | 罗马音名 |
+| name_kanji | varchar | 汉字名 |
+| name_kana | varchar | 假名 |
+
+### derived_actor (男演员表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| id | integer | 男演员唯一ID |
+| name_kanji | varchar | 汉字名 |
+| name_kana | varchar | 假名 |
+
+### derived_author (作者表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| id | integer | 作者唯一ID |
+| name_kanji | varchar | 汉字名 |
+| name_kana | varchar | 假名 |
+
+### derived_video_director (视频-导演关联表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| content_id | varchar | 视频ID |
+| director_id | integer | 导演ID |
+
+### derived_video_actor (视频-男演员关联表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| content_id | varchar | 视频ID |
+| actor_id | integer | 男演员ID |
+| ordinality | integer | 排序顺序 |
+
+### derived_video_author (视频-作者关联表)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| content_id | varchar | 视频ID |
+| author_id | integer | 作者ID |
+
 ---
 
 ## 通用说明
@@ -184,7 +238,7 @@ HTTP状态码：
 |------|------|------|------|------|
 | q | string | 否 | 关键词搜索（匹配 title_en、title_ja、comment_en、comment_ja） | `q=tokyo` |
 | content_id | string | 否 | 内容ID精确匹配 | `content_id=100tv00031` |
-| dvd_id | string | 否 | DVD编号（自动处理横杠，不区分大小写） | `dvd_id=100TV-031` 或 `dvd_id=100TV031` |
+| dvd_id | string | 否 | DVD编号（自动处理横杠和大小写，如果 dvd_id 匹配不到会自动尝试用番号作为 content_id 匹配） | `dvd_id=100TV-031` 或 `dvd_id=100TV031` |
 | maker_id | int | 否 | 厂商ID（精确匹配，优先于 maker_name） | `maker_id=1001` |
 | maker_name | string | 否 | 厂商名称（模糊匹配 name_en/name_ja） | `maker_name=SOD` |
 | series_id | int | 否 | 系列ID（精确匹配，优先于 series_name） | `series_id=211325` |
@@ -313,9 +367,12 @@ curl "http://localhost:8080/api/v1/videos?page=1&page_size=20"
 **说明**:
 - `content_id` 不能为空，否则返回 400
 - 返回完整视频信息，包括关联的演员、厂商、品牌、系列、题材分类
+- 返回数据包含导演（directors）、男演员（actors）、作者（authors）信息
 - 演员信息通过 `derived_video_actress` 关联表获取，按 ordinality 排序
 - 题材分类通过 `derived_video_category` 关联表获取，按 name_en 排序
 - 预览视频 sample_url 优先使用 derived_video 表数据，若为空则从 source_dmm_trailer 补全（覆盖率约91%）
+- `image_url` 字段根据 `service_code` 和 `jacket_full_url` 自动拼接完整图片URL
+- 如果视频没有 `dvd_id`，会从标题中自动提取番号
 
 **示例**:
 ```bash
@@ -370,6 +427,7 @@ curl -X POST "http://localhost:8080/api/v1/videos/batch" \
 - 支持 `ABC-001`、`ABC001`、`abc-001` 等格式
 - 最多支持 100 个 dvd_id
 - 未找到的番号不会出现在返回结果中
+- 对于 dvd_id 匹配不到的番号，会尝试提取前缀和数字作为 content_id 进行二次查找
 
 **示例**:
 ```bash
@@ -625,7 +683,85 @@ curl "http://localhost:8080/api/v1/categories?q=Amateur"
 
 ---
 
-#### 14. 题材分类统计
+#### 14. 导演列表
+
+**接口**: `GET /api/v1/directors`
+
+**描述**: 获取导演分页列表
+
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_romaji/name_kanji/name_kana） | `q=松田` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
+
+**说明**:
+- 结果按 name_kanji 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
+
+**示例**:
+```bash
+curl "http://localhost:8080/api/v1/directors"
+curl "http://localhost:8080/api/v1/directors?q=松田"
+```
+
+---
+
+#### 15. 男演员列表
+
+**接口**: `GET /api/v1/actors`
+
+**描述**: 获取男演员分页列表
+
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_kanji/name_kana） | `q=田中` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
+
+**说明**:
+- 结果按 name_kanji 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
+
+**示例**:
+```bash
+curl "http://localhost:8080/api/v1/actors"
+curl "http://localhost:8080/api/v1/actors?q=田中"
+```
+
+---
+
+#### 16. 作者列表
+
+**接口**: `GET /api/v1/authors`
+
+**描述**: 获取作者分页列表
+
+**参数**:
+
+| 参数 | 类型 | 必填 | 说明 | 示例 |
+|------|------|------|------|------|
+| q | string | 否 | 关键词搜索（匹配 name_kanji/name_kana） | `q=西條` |
+| page | int | 否 | 页码 | `page=1` |
+| page_size | int | 否 | 每页数量（默认20，最大100） | `page_size=50` |
+
+**说明**:
+- 结果按 name_kanji 升序排序
+- `q` 参数使用 ILIKE 模糊匹配
+
+**示例**:
+```bash
+curl "http://localhost:8080/api/v1/authors"
+curl "http://localhost:8080/api/v1/authors?q=西條"
+```
+
+---
+
+#### 17. 题材分类统计
 
 **接口**: `GET /api/v1/categories/stats`
 
@@ -666,7 +802,7 @@ curl "http://localhost:8080/api/v1/categories/stats"
 
 ---
 
-#### 15. 统计数据
+#### 18. 统计数据
 
 **接口**: `GET /api/v1/stats`
 
@@ -692,7 +828,7 @@ curl "http://localhost:8080/api/v1/stats"
 
 ---
 
-#### 16. 健康检查
+#### 19. 健康检查
 
 **接口**: `GET /health`
 
@@ -873,7 +1009,18 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
       "name_en": "Featured Actress",
       "name_ja": "単体作品"
     }
-  ]
+  ],
+  "directors": [
+    {
+      "id": 2106,
+      "name_romaji": "Koji Matsuda",
+      "name_kanji": "松田コージ",
+      "name_kana": "まつだこーじ"
+    }
+  ],
+  "actors": [],
+  "authors": [],
+  "image_url": "https://awsimgsrc.dmm.com/dig/digital/video/100tv00031/100tv00031pl.jpg"
 }
 ```
 
@@ -926,9 +1073,12 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
 
 返回的 `jacket_full_url`、`jacket_thumb_url`、`gallery_thumb_first`、`gallery_thumb_last`、`image_url`、`sample_url` 等字段是相对路径，需要配合实际站点前缀使用。
 
-### 敏感内容过滤
+### 文本处理
 
-部分 title_en 和 comment_en 字段可能包含过滤字符（如 `Sch**l`、`F**k`），这是原始数据的特点，应用层如需展示可自行处理。
+API 会自动对英文文本进行以下处理：
+- **反审查还原**: title_en、comment_en 等英文字段中的审查打码词汇会被还原（如 `R***e` → `Rape`、`F****d` → `Forced`）
+- **番号提取**: 没有 dvd_id 的视频会从标题中自动提取番号
+- **图片URL拼接**: `image_url` 字段根据 service_code 自动拼接完整URL（digital/mono 使用不同的CDN域名）
 
 ---
 
