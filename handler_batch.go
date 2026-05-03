@@ -129,6 +129,60 @@ func batchLookupVideos(c *gin.Context) {
 	// Batch load related data
 	loadRelatedDataBatch(ctx, videos)
 
+	// Find which normalized IDs were not matched by dvd_id
+	matchedNorms := make(map[string]bool)
+	for _, v := range videos {
+		if v.DvdID != nil {
+			matchedNorms[strings.ToLower(strings.ReplaceAll(*v.DvdID, "-", ""))] = true
+		}
+	}
+
+	// Collect unmatched IDs and try content_id fallback
+	var unmatched []string
+	for _, id := range req.DvdIDs {
+		norm := strings.ToLower(strings.ReplaceAll(id, "-", ""))
+		if !matchedNorms[norm] {
+			matches := dvdCodeRegex.FindStringSubmatch(id)
+			if len(matches) >= 3 && matches[1] != "" && matches[2] != "" {
+				fallback := strings.ToLower(matches[1] + matches[2])
+				unmatched = append(unmatched, fallback)
+			}
+		}
+	}
+
+	// Query content_id for unmatched
+	if len(unmatched) > 0 {
+		placeholders2 := make([]string, len(unmatched))
+		args2 := make([]interface{}, len(unmatched))
+		for i, id := range unmatched {
+			placeholders2[i] = fmt.Sprintf("$%d", i+1)
+			args2[i] = id
+		}
+
+		fallbackQuery := fmt.Sprintf(`
+			SELECT v.content_id, v.dvd_id, v.title_en, v.title_ja, v.comment_en, v.comment_ja,
+				   v.runtime_mins, v.release_date, COALESCE(v.sample_url, t.url) as sample_url,
+				   v.maker_id, v.label_id, v.series_id,
+				   v.jacket_full_url, v.jacket_thumb_url, v.gallery_thumb_first, v.gallery_thumb_last,
+				   v.site_id, v.service_code
+			FROM derived_video v
+			LEFT JOIN source_dmm_trailer t ON v.content_id = t.content_id
+			WHERE v.content_id IN (%s)
+		`, strings.Join(placeholders2, ","))
+
+		rows2, err := pool.Query(ctx, fallbackQuery, args2...)
+		if err == nil {
+			defer rows2.Close()
+			for rows2.Next() {
+				v, err := scanVideo(rows2)
+				if err != nil {
+					continue
+				}
+				videos = append(videos, v)
+			}
+		}
+	}
+
 	// Build result map keyed by normalized dvd_id for easy lookup
 	result := make(map[string]Video)
 	// Also build a normalized->original mapping

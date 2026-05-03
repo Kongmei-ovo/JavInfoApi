@@ -193,10 +193,23 @@ func searchVideos(c *gin.Context) {
 	}
 
 	if dvdID != "" {
-		cleanDvdID := strings.ToLower(strings.ReplaceAll(dvdID, "-", ""))
-		whereClause += fmt.Sprintf(" AND (dvd_id ILIKE $%d OR LOWER(REPLACE(dvd_id, '-', '')) = $%d)", argIndex, argIndex+1)
-		args = append(args, "%"+dvdID+"%", cleanDvdID)
-		argIndex += 2
+		// Normalize: uppercase for dvd_id match
+		normalizedDvdID := strings.ToUpper(dvdID)
+		// Try dvd_id ILIKE match first
+		whereClause += fmt.Sprintf(" AND (dvd_id ILIKE $%d", argIndex)
+		args = append(args, "%"+normalizedDvdID+"%")
+		argIndex++
+
+		// Fallback: extract prefix-number, lowercase as content_id
+		matches := dvdCodeRegex.FindStringSubmatch(dvdID)
+		if len(matches) >= 3 && matches[1] != "" && matches[2] != "" {
+			contentIDFallback := strings.ToLower(matches[1] + matches[2])
+			whereClause += fmt.Sprintf(" OR content_id = $%d)", argIndex)
+			args = append(args, contentIDFallback)
+			argIndex++
+		} else {
+			whereClause += ")"
+		}
 	}
 
 	// Name resolution filters (extracted to reduce duplication)
