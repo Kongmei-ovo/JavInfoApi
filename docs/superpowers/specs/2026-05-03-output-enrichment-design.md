@@ -166,19 +166,21 @@ R***e,Rape
 
 ---
 
-## 四、Wikidata 补全演员名称
+## 四、Wikidata 补全日文名
 
-### 原理
+### 场景
 
-参考 R18dev_SQL 的 `wikidata()` 函数，通过 Wikidata SPARQL 查询补充演员信息。
+部分演员在数据库中缺少 `name_kanji`（只有 name_romaji / name_kana）。API 同时输出所有名字字段，不做语言回退。业务层拿到数据后做映射翻译，所以 `name_kanji` 缺失会影响下游。
 
-R18dev_SQL 用此方法补英文名。本项目改为：**补全缺少 romaji 的演员日文名**。
+### 目标
+
+对 `name_kanji == nil` 的演员，通过 Wikidata 查询补全日文名（汉字）。
 
 ### 查询方式
 
 ```sparql
 SELECT DISTINCT ?itemLabel WHERE {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "ja,en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "ja". }
   {
     SELECT DISTINCT ?item WHERE {
       ?item p:P9781 ?statement0.
@@ -190,37 +192,25 @@ SELECT DISTINCT ?itemLabel WHERE {
 ```
 
 - P9781 = DMM actress ID 属性
-- `wikibase:language "ja,en"` 优先获取日文标签，fallback 到英文
+- `wikibase:language "ja"` 只取日文标签
 
 ### 缓存策略
 
-- 启动时预加载 `derived_actress` 中 `name_romaji IS NULL` 的演员 ID 列表
-- 用 `sync.Map` 缓存查询结果，key=actress_id，value=name string
-- 设置 TTL（如 24 小时），过期重新查询
-- 懒加载：首次查询时触发，不预查全量
-
-### 名称回退链
-
-```
-name_romaji (DB)
-  ↓ null
-Wikidata 日文标签 (ja)
-  ↓ null
-Wikidata 英文标签 (en)
-  ↓ null
-name_kanji (DB，兜底)
-```
+- 用 `sync.Map` 缓存查询结果，key=actress_id，value=日文名 string
+- 懒加载：首次遇到 name_kanji 为 nil 的演员时触发查询
+- 缓存不设 TTL（演员名不会变），查不到的也缓存空串避免重复查
 
 ### 实现位置
 
 - 新增 `wikidata.go` 文件
-- 在 `loadRelatedData` / `loadRelatedDataBatch` 中，actress 查询完成后，对 `name_romaji == nil` 的演员异步补充
+- 在 `loadRelatedData` / `loadRelatedDataBatch` 中，actress 查询完成后，对 `name_kanji == nil` 的演员调用补充
 
 ### 限制
 
 - 只处理 actress（女优），不处理 actor（男优）和 author（作者）
-- Wikidata 不一定有所有演员的数据，查不到就用 name_kanji 兜底
+- Wikidata 不一定有所有演员数据，查不到就保持 nil
 - HTTP 调用有延迟，用 goroutine 并发 + 超时控制（单次 5s）
+- 数据库中 35,790 个演员缺少 name_kanji
 
 ---
 
