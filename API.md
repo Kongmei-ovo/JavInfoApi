@@ -371,7 +371,7 @@ curl "http://localhost:8080/api/v1/videos?page=1&page_size=20"
 - 演员信息通过 `derived_video_actress` 关联表获取，按 ordinality 排序
 - 题材分类通过 `derived_video_category` 关联表获取，按 name_en 排序
 - 预览视频 sample_url 优先使用 derived_video 表数据，若为空则从 source_dmm_trailer 补全（覆盖率约91%）
-- `image_url` 字段根据 `service_code` 和 `jacket_full_url` 自动拼接完整图片URL
+- `jacket_full_url`、`jacket_thumb_url` 会根据 `service_code` 自动拼接成可访问的完整图片URL
 - 如果视频没有 `dvd_id`，会从标题中自动提取番号
 
 **示例**:
@@ -939,7 +939,7 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
       "title_ja": "女子○生を靴下一丁にひん剥いて挿入してみたら…2 ちーちゃん",
       "runtime_mins": 13,
       "release_date": "2019-07-21",
-      "jacket_thumb_url": "digital/video/100tv00031/100tv00031ps",
+      "jacket_thumb_url": "https://awsimgsrc.dmm.com/dig/digital/video/100tv00031/100tv00031ps.jpg",
       "site_id": 2,
       "service_code": "digital"
     }
@@ -967,8 +967,8 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
   "maker_id": 6733,
   "label_id": 46007,
   "series_id": 222184,
-  "jacket_full_url": "digital/video/100tv00031/100tv00031pl",
-  "jacket_thumb_url": "digital/video/100tv00031/100tv00031ps",
+  "jacket_full_url": "https://awsimgsrc.dmm.com/dig/digital/video/100tv00031/100tv00031pl.jpg",
+  "jacket_thumb_url": "https://awsimgsrc.dmm.com/dig/digital/video/100tv00031/100tv00031ps.jpg",
   "gallery_thumb_first": "digital/video/100tv00031/100tv00031-1",
   "gallery_thumb_last": "digital/video/100tv00031/100tv00031-5",
   "site_id": 2,
@@ -1019,8 +1019,7 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
     }
   ],
   "actors": [],
-  "authors": [],
-  "image_url": "https://awsimgsrc.dmm.com/dig/digital/video/100tv00031/100tv00031pl.jpg"
+  "authors": []
 }
 ```
 
@@ -1071,14 +1070,15 @@ curl "http://localhost:8080/api/v1/videos/search?maker_id=1001&page_size=100" > 
 
 ### 图片URL处理
 
-返回的 `jacket_full_url`、`jacket_thumb_url`、`gallery_thumb_first`、`gallery_thumb_last`、`image_url`、`sample_url` 等字段是相对路径，需要配合实际站点前缀使用。
+- `jacket_full_url`、`jacket_thumb_url` 已自动拼接为可访问的完整URL（根据 `service_code` 使用不同CDN域名）
+- `gallery_thumb_first`、`gallery_thumb_last`、`sample_url` 等字段仍是相对路径，需要配合实际站点前缀使用
 
 ### 文本处理
 
 API 会自动对英文文本进行以下处理：
 - **反审查还原**: title_en、comment_en 等英文字段中的审查打码词汇会被还原（如 `R***e` → `Rape`、`F****d` → `Forced`）
 - **番号提取**: 没有 dvd_id 的视频会从标题中自动提取番号
-- **图片URL拼接**: `image_url` 字段根据 service_code 自动拼接完整URL（digital/mono 使用不同的CDN域名）
+- **图片URL拼接**: `jacket_full_url`、`jacket_thumb_url` 根据 service_code 自动拼接完整URL（digital/mono 使用不同的CDN域名）
 
 ---
 

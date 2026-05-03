@@ -904,10 +904,9 @@
           "title_ja": { "type": "string" },
           "runtime_mins": { "type": "integer" },
           "release_date": { "type": "string", "format": "date" },
-          "jacket_thumb_url": { "type": "string" },
+          "jacket_thumb_url": { "type": "string", "description": "封面缩略图完整URL（已根据service_code自动拼接）" },
           "site_id": { "type": "integer" },
-          "service_code": { "type": "string" },
-          "image_url": { "type": "string", "description": "拼接后的完整封面图片URL" }
+          "service_code": { "type": "string" }
         }
       },
       "VideoDetailResponse": {
@@ -925,8 +924,8 @@
           "maker_id": { "type": "integer" },
           "label_id": { "type": "integer" },
           "series_id": { "type": "integer" },
-          "jacket_full_url": { "type": "string" },
-          "jacket_thumb_url": { "type": "string" },
+          "jacket_full_url": { "type": "string", "description": "封面大图完整URL（已根据service_code自动拼接）" },
+          "jacket_thumb_url": { "type": "string", "description": "封面缩略图完整URL（已根据service_code自动拼接）" },
           "gallery_thumb_first": { "type": "string" },
           "gallery_thumb_last": { "type": "string" },
           "site_id": { "type": "integer" },
@@ -953,8 +952,7 @@
           "authors": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/Author" }
-          },
-          "image_url": { "type": "string", "description": "拼接后的完整封面图片URL，根据 service_code 自动拼接" }
+          }
         }
       },
       "ActressListResponse": {

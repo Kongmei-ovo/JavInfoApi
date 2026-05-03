@@ -28,7 +28,6 @@ type Video struct {
 	Directors      []Director `json:"directors,omitempty"`
 	Actors         []Actor    `json:"actors,omitempty"`
 	Authors        []Author   `json:"authors,omitempty"`
-	ImageURL       *string    `json:"image_url,omitempty"`
 }
 
 // Actress represents an actress

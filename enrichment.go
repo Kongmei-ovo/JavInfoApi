@@ -25,22 +25,28 @@ func extractDvdCode(titleJa, titleEn *string) *string {
 	return nil
 }
 
-// buildImageURL constructs a full image URL from jacket_full_url and service_code.
-func buildImageURL(jacketFullURL *string, serviceCode string) *string {
-	if jacketFullURL == nil || *jacketFullURL == "" {
+// buildImageURL constructs a full image URL from a relative jacket path and service_code.
+func buildImageURL(path *string, serviceCode string) *string {
+	if path == nil || *path == "" {
 		return nil
 	}
 	var url string
 	switch serviceCode {
 	case "digital":
-		url = "https://awsimgsrc.dmm.com/dig/" + *jacketFullURL + ".jpg"
+		url = "https://awsimgsrc.dmm.com/dig/" + *path + ".jpg"
 	case "mono":
-		path := strings.ReplaceAll(*jacketFullURL, "adult/", "")
-		url = "https://awsimgsrc.dmm.com/dig/" + path + ".jpg"
+		clean := strings.ReplaceAll(*path, "adult/", "")
+		url = "https://awsimgsrc.dmm.com/dig/" + clean + ".jpg"
 	default:
-		url = "https://pics.dmm.co.jp/" + *jacketFullURL + ".jpg"
+		url = "https://pics.dmm.co.jp/" + *path + ".jpg"
 	}
 	return &url
+}
+
+// resolveJacketURLs replaces relative jacket paths with full accessible URLs.
+func resolveJacketURLs(video *Video) {
+	video.JacketFullURL = buildImageURL(video.JacketFullURL, video.ServiceCode)
+	video.JacketThumbURL = buildImageURL(video.JacketThumbURL, video.ServiceCode)
 }
 
 // enrichVideo applies all output enrichment to a video.
@@ -50,8 +56,8 @@ func enrichVideo(video *Video) {
 		video.DvdID = extractDvdCode(video.TitleJa, video.TitleEn)
 	}
 
-	// 2. Image URL construction
-	video.ImageURL = buildImageURL(video.JacketFullURL, video.ServiceCode)
+	// 2. Resolve jacket URLs to full accessible URLs
+	resolveJacketURLs(video)
 
 	// 3. Decensor English text fields
 	video.TitleEn = decensorPtr(video.TitleEn)
@@ -83,5 +89,5 @@ func enrichVideoLight(video *Video) {
 	if video.DvdID == nil {
 		video.DvdID = extractDvdCode(video.TitleJa, video.TitleEn)
 	}
-	video.ImageURL = buildImageURL(video.JacketFullURL, video.ServiceCode)
+	resolveJacketURLs(video)
 }
